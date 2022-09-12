@@ -401,7 +401,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description="Dumps the Audit Log and eventually sends the entries to a syslog facility for the sake of "
-                    "testing and demonstration.",
+                    "testing and demonstration. ",
         epilog="For any questions, feedback, suggestions, send money (yes...it's a dream I know) you can contact the "
                "author at msz@msz.eu")
     parser.add_argument("host", help="Ip address or hostname of the payShield")
