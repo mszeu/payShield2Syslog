@@ -20,7 +20,7 @@ VERSION = "0.1"
 
 def decode_q2(response_to_decode: bytes, head_len: int):
     """
-    It decodes the result of the command NI and prints the meaning of the returned output
+    It decodes the result of the command Q2 and prints the meaning of the returned output
 
     Parameters
     ___________
@@ -34,8 +34,8 @@ def decode_q2(response_to_decode: bytes, head_len: int):
     nothing
     """
 
-    SPECIFIC_ERROR: Dict[str, str] = {'01': 'Failed to execute NETSTAT',
-                                      '82': 'Invalid Ethernet Statistics value'}
+    SPECIFIC_ERROR: Dict[str, str] = {'35': 'No Audit Records found',
+                                      '36': 'All Audit Records have been retrieved'}
 
     response_to_decode, msg_len, str_pointer = common_parser(response_to_decode, head_len)
     if response_to_decode[str_pointer:str_pointer + 2] == '00':  # No errors
