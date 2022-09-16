@@ -413,7 +413,7 @@ def common_parser(response_to_decode: bytes, head_len: int) -> Tuple[str, int, i
 
 
 if __name__ == "__main__":
-    print("PayShield stress utility, version " + VERSION + ", by Marco S. Zuppone - msz@msz.eu - https://msz.eu")
+    print("PayShield Audit Log utility, version " + VERSION + ", by Marco S. Zuppone - msz@msz.eu - https://msz.eu")
     print("To get more info about the usage invoke it with the -h option")
     print("This software is open source and it is under the Affero AGPL 3.0 license")
     print("")
@@ -428,7 +428,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description="Dumps the Audit Log and eventually sends the entries to a syslog facility for the sake of "
-                    "testing and demonstration. ",
+                    "testing and demonstration.",
         epilog="For any questions, feedback, suggestions, send money (yes...it's a dream I know) you can contact the "
                "author at msz@msz.eu")
     group = parser.add_mutually_exclusive_group()
