@@ -50,20 +50,30 @@ def decode_q2(response_to_decode: bytes, head_len: int):
                         data_value[10:12]
         print("Date: ", date_readable)
         command_action_code = bin_entry[10:12]
-        print("Action Code", command_action_code)
+        print("Action Code", command_action_code.decode())
         bit_mask_str = str(bin(int(binascii.hexlify(bin_entry[12:14]).decode(), base=16))[2:])
         print("Bit Mask", bit_mask_str)
         command_code_type = bit_mask_str[0:2]
         if command_code_type == '00':
-            print("Command code type: Host Command")
+            print("\tCommand code type: Host Command")
         elif command_code_type == '01':
-            print("Command code type: Console Command")
+            print("\tCommand code type: Console Command")
         elif command_code_type == '10':
-            print("Command code type:  Fraud Event")
+            print("\tCommand code type:  Fraud Event")
         elif command_code_type == '11':
-            print("Command code type: User Action")
-
-
+            print("\tCommand code type: User Action")
+        if bit_mask_str[2:3] == '0':
+            print("\tNot Archived")
+        else:
+            print("\tArchived")
+        if bit_mask_str[3:4] == '0':
+            print("\tNot Retrieved")
+        else:
+            print("\tRetrieved")
+        print("\tUnused:", bit_mask_str[4:])
+        print("Response Error Code:", bin_entry[14:16].decode())
+        print("Audit Record MAC:", binascii.hexlify(bin_entry[16:16 + 8]).decode().upper())
+        print("Random MAC Key:", binascii.hexlify(bin_entry[24:]).decode().upper())
 
     else:
         if SPECIFIC_ERROR.get(response_to_decode[str_pointer:str_pointer + 2]) is not None:
@@ -486,4 +496,3 @@ if __name__ == "__main__":
                      DECODERS.get(command[len(args.header):len(args.header) + 2], None))
             print("")
         print("DONE")
-
