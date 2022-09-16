@@ -43,11 +43,28 @@ def decode_q2(response_to_decode: bytes, head_len: int):
         log_entry = response_to_decode[str_pointer:str_pointer + 80]
         print("Log Entry in Hex: ", log_entry)
         bin_entry = binascii.unhexlify(log_entry)
+        print("Audit Counter: ", int(binascii.hexlify(bin_entry[0:4]).decode(), base=16))
         data_value = binascii.hexlify(bin_entry[4:10]).decode()
         date_readable = data_value[:2] + ':' + data_value[2:4] + ':' + data_value[4:6] + \
                         ' ' + data_value[6:8] + '/' + data_value[8:10] + '/20' + \
                         data_value[10:12]
         print("Date: ", date_readable)
+        command_action_code = bin_entry[10:12]
+        print("Action Code", command_action_code)
+        bit_mask_str = str(bin(int(binascii.hexlify(bin_entry[12:14]).decode(), base=16))[2:])
+        print("Bit Mask", bit_mask_str)
+        command_code_type = bit_mask_str[0:2]
+        if command_code_type == '00':
+            print("Command code type: Host Command")
+        elif command_code_type == '01':
+            print("Command code type: Console Command")
+        elif command_code_type == '10':
+            print("Command code type:  Fraud Event")
+        elif command_code_type == '11':
+            print("Command code type: User Action")
+
+
+
     else:
         if SPECIFIC_ERROR.get(response_to_decode[str_pointer:str_pointer + 2]) is not None:
             print("Command specific error: ", SPECIFIC_ERROR.get(response_to_decode[str_pointer:str_pointer + 2]))
@@ -404,6 +421,7 @@ if __name__ == "__main__":
                     "testing and demonstration. ",
         epilog="For any questions, feedback, suggestions, send money (yes...it's a dream I know) you can contact the "
                "author at msz@msz.eu")
+    group = parser.add_mutually_exclusive_group()
     parser.add_argument("host", help="Ip address or hostname of the payShield")
 
     parser.add_argument("--port", "-p", help="The host port", default=1500, type=int)
@@ -411,13 +429,13 @@ if __name__ == "__main__":
     parser.add_argument("--header",
                         help="the header string to prepend to the host command. If not specified the default is HEAD.",
                         default="HEAD", type=str)
-    parser.add_argument("--forever", help="if this option is specified the program runs for ever.",
-                        action="store_true")
+    group.add_argument("--forever", help="if this option is specified the program runs for ever.",
+                       action="store_true")
     parser.add_argument("--decode", help="if specified the reply of the payShield is interpreted "
                                          "if a decoder function for that command has been implemented.",
                         action="store_true")
 
-    parser.add_argument("--times", help="how many time to repeat the operation", type=int, default=1)
+    group.add_argument("--times", help="how many time to repeat the operation", type=int, default=1)
     parser.add_argument("--proto", help="accepted value are tcp or udp, the default is tcp", default="tcp",
                         choices=["tcp", "udp", "tls"], type=str.lower)
     parser.add_argument("--keyfile", help="client key file, used if the protocol is TLS", type=Path,
@@ -464,34 +482,8 @@ if __name__ == "__main__":
     else:
         for i in range(0, args.times):
             print("Iteration: ", i + 1, " of ", args.times)
-            if args.decode:
-                run_test(args.host, args.port, command, args.proto, len(args.header),
-                         DECODERS.get(command[len(args.header):len(args.header) + 2], None))
-            else:
-                run_test(args.host, args.port, command, args.proto, len(args.header), None)
+            run_test(args.host, args.port, command, args.proto, len(args.header),
+                     DECODERS.get(command[len(args.header):len(args.header) + 2], None))
             print("")
         print("DONE")
 
-
-def setup_connection(ip_addr: str, port: int, proto: str = "tcp") -> socket:
-    if proto == "tcp":
-        # creates the TCP socket
-        connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        connection.connect((ip_addr, port))
-        return connection
-
-    elif proto == "tls":
-        # creates the TCP TLS socket
-        connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        ciphers = "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:AES128-GCM-SHA256:AES128-SHA256:HIGH:"
-        ciphers += "!aNULL:!eNULL:!EXPORT:!DSS:!DES:!RC4:!3DES:!MD5:!PSK"
-        ssl_sock = ssl.wrap_socket(connection, args.keyfile, args.crtfile)
-        ssl_sock.connect((ip_addr, port))
-        return connection
-
-    elif proto == "udp":
-        # create the UDP socket
-        connection = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        return connection
-
-    return None
