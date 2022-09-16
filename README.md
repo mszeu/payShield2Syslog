@@ -1,9 +1,9 @@
 # PayShieldToSyslog
 
-<a href="https://www.jetbrains.com/?from=PayshieldPPressureTest"><img src=images/jetbrains-variant-3.png width=100></a>
+<a href="https://www.jetbrains.com/?from=payShiled2Syslog"><img src=images/jetbrains-variant-3.png width=100></a>
 Many thanks to <a href="https://www.jetbrains.com/?from=PayshieldPPressureTest">JetBrains</a> for giving us the <b>Open
 Source License</b> for free with the full access to their developer suite.
-<a href="https://www.jetbrains.com/pycharm/?from=PayshieldPPressureTesPyCharm">PyCharm</a> is an awesome Python IDE that
+<a href="https://www.jetbrains.com/pycharm/?from=payShiled2Syslog">PyCharm</a> is an awesome Python IDE that
 greatly simplified my work.
 
 &nbsp;
