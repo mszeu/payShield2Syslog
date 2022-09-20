@@ -7,6 +7,7 @@ import socket
 import ssl
 import binascii
 import string
+import types
 from struct import *
 import argparse
 from pathlib import Path
@@ -560,6 +561,7 @@ if __name__ == "__main__":
     if args.syslog is not None:
         logger = logging.getLogger('mylogger')
         syslog = logging.handlers.SysLogHandler(address=(args.syslog, 514))
+        logger.setLevel(logging.DEBUG)
         syslog.setLevel(logging.INFO)
         logger.addHandler(syslog)
     if args.forever:
