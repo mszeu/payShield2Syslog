@@ -22,9 +22,9 @@ It requires **Python 3**. It was tested on **Python 3.10**
 
 ## Usage
 
-    usage: payShieldToSyslog.py [-h] [--port PORT] [--header HEADER] 
-            [--forever] [--decode] [--times TIMES] [--proto {tcp,udp,tls}]
-            [--keyfile KEYFILE] [--crtfile CRTFILE] host
+    usage: payShieldToSyslog.py [-h] [--port PORT] [--header HEADER] [--forever] [--decode] [--times TIMES]
+                                [--proto {tcp,udp,tls}] [--keyfile KEYFILE] [--crtfile CRTFILE] [--syslog SYSLOG]
+                                [--syslogport SYSLOGPORT] host
 
 ### Mandatory parameter(s)
 
@@ -50,11 +50,15 @@ It's only considered if the protocol is **tls**.
 
 **--header** the header string to prefix to the host command, if not specified the default value is **HEAD**.
 
-**--forever** the test will run forever. Use **CTRL-C** to terminate it.
+**--forever** the test will run forever or if a result code different form 00 is returned from the payShield. Use **CTRL-C** to terminate it.
 
 **--times** how many times execute the test. If it is not specified the default value is **1** time.
 
-**--decode** decodes the response of the payShield.
+**--decode** decodes the response of the payShield and, if a syslog facility is specified the message is sent to syslog.
+
+**--syslog** The address of the syslog facility
+
+**--syslogport** The UDP syslog port
 
 ## Example
 
