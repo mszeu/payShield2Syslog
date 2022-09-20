@@ -16,7 +16,7 @@ from types import FunctionType
 import logging
 import logging.handlers
 
-VERSION = "0.1"
+VERSION = "0.2"
 
 
 # Begin Class
@@ -35,7 +35,7 @@ class PayConnector:
             if (keyfile is None) or (crtfile is None):
                 raise ValueError("keyfile and crtfile parameters are both required")
 
-    def connect(self, host_command):
+    def sendCommand(self, host_command):
         size = pack('>h', len(host_command))
 
         # join everything together in python3
@@ -104,11 +104,7 @@ class PayConnector:
         if self.connected:
             self.connection.close()
 
-    def __delete__(self, instance):
-        instance.connection.close()
-
     def __del__(self):
-        print("del invoked")
         self.close()
 
 
@@ -315,19 +311,19 @@ def payshield_error_codes(error_code: str) -> str:
 def check_returned_command_verb(result_returned: bytes, head_len: int, command_sent: str) -> Tuple[int, str, str]:
     """
     Checks if the command returned by the payShield is congruent to the command sent
+
     Parameters
-
     ----------
-
-    :param result_returned: bytes
+    result_returned: bytes
         The output returned from the payShield
-    :param head_len: int
+    head_len: int
         The length of the header
-    :param command_sent: str
+    command_sent: str
         The command send to the payShield
 
     Returns
-         ----------
+    ----------
+    :return
         a Tuple[int, str, str]
         where the first value is 0 of the command is congruent or -1 if it is not
         the second value is the command sent
@@ -383,7 +379,7 @@ def hex2ip(hex_ip):
 
 
 def run_test(payConnectorInstance: PayConnector, host_command: str,
-             header_len: int = 4, decoder_funct: FunctionType = None, logger_instance=None) -> int:
+             header_len: int = 4, decoder_funct: FunctionType = None, logger_instance=None) -> str:
     """
         It connects to the specified host and port, using the specified protocol (tcp, udp or tls) and sends the command.
 
@@ -401,15 +397,16 @@ def run_test(payConnectorInstance: PayConnector, host_command: str,
             If not provided the default is None
 
          Returns
-         ___________
-          None
+        ___________
+
+            The return code from the command:
     """
 
     try:
         message_size = pack('>h', len(host_command))
         message = message_size + host_command.encode()
 
-        data = payConnectorInstance.connect(host_command)
+        data = payConnectorInstance.sendCommand(host_command)
 
         # try to decode the result code contained in the reply of the payShield
         check_result_tuple = (-1, "", "")
@@ -447,9 +444,7 @@ def run_test(payConnectorInstance: PayConnector, host_command: str,
     except Exception as e:
         print("Unexpected issue:", e)
     finally:
-        pass
-        # TODO: To revise, I do not want to close every time
-        # payConnectorInstance.close()
+        return return_code_tuple[0]
 
 
 def common_parser(response_to_decode: bytes, head_len: int) -> Tuple[str, int, int]:
@@ -529,6 +524,7 @@ if __name__ == "__main__":
     parser.add_argument("--crtfile", help="client certificate file, used if the protocol is TLS", type=Path,
                         default="client.crt")
     parser.add_argument("--syslog", help="syslog facility ip address", type=str)
+    parser.add_argument("--syslogport", help="syslog UDP port", type=int, default=514)
     args = parser.parse_args()
 
     command = args.header + 'Q2'
@@ -560,7 +556,7 @@ if __name__ == "__main__":
     logger = None
     if args.syslog is not None:
         logger = logging.getLogger('mylogger')
-        syslog = logging.handlers.SysLogHandler(address=(args.syslog, 514))
+        syslog = logging.handlers.SysLogHandler(address=(args.syslog, args.syslogport))
         logger.setLevel(logging.DEBUG)
         syslog.setLevel(logging.INFO)
         logger.addHandler(syslog)
@@ -568,21 +564,29 @@ if __name__ == "__main__":
         i = 1
         while True:
             print("Iteration: ", i)
+            return_code = ''
             if args.decode:
-                run_test(payConnInst, command, len(args.header),
-                         DECODERS.get(command[len(args.header):len(args.header) + 2], None), logger)
+                return_code = run_test(payConnInst, command, len(args.header),
+                                       DECODERS.get(command[len(args.header):len(args.header) + 2], None), logger)
             else:
-                run_test(payConnInst, command, len(args.header), None)
+                return_code = run_test(payConnInst, command, len(args.header), None)
             i = i + 1
+            if return_code != '00':
+                print("Return code: ", return_code)
+                exit()
             print("")
     else:
         for i in range(0, args.times):
             print("Iteration: ", i + 1, " of ", args.times)
+            return_code = ''
             if args.decode:
-                run_test(payConnInst, command, len(args.header),
-                         DECODERS.get(command[len(args.header):len(args.header) + 2], None), logger)
+                return_code = run_test(payConnInst, command, len(args.header),
+                                       DECODERS.get(command[len(args.header):len(args.header) + 2], None), logger)
             else:
-                run_test(payConnInst, command, len(args.header), None)
+                return_code = run_test(payConnInst, command, len(args.header), None)
             i = i + 1
+            if return_code != '00':
+                print("Return code: ", return_code)
+                exit()
             print("")
         print("DONE")
