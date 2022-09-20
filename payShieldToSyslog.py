@@ -295,9 +295,7 @@ def run_test(ip_addr: str, port: int, host_command: str, proto: str = "tcp", hea
     if proto not in ['tcp', 'udp', 'tls']:
         print("invalid protocol parameter, It needs to be tcp, udp or tls")
         return -1
-
     try:
-
         # calculate the size and format it correctly
         size = pack('>h', len(host_command))
 
@@ -329,6 +327,8 @@ def run_test(ip_addr: str, port: int, host_command: str, proto: str = "tcp", hea
             connection = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             # send data
             connection.sendto(message, (ip_addr, port))
+            # setting a timeout of 5 seconds, by default, at least on Windows the timeout for the udp socket is infinite
+            connection.settimeout(5)
             # receive data
             data_tuple = connection.recvfrom(buffer_size)
             data = data_tuple[0]
@@ -362,16 +362,12 @@ def run_test(ip_addr: str, port: int, host_command: str, proto: str = "tcp", hea
             decoder_funct(data, header_len)
 
     except ConnectionError as e:
-        print("Connection issue: ", e.message)
+        print("Connection issue: ", e)
     except FileNotFoundError as e:
         print("The client certificate file or the client key file cannot be found or accessed.\n" +
-              "Check value passed to the parameters --keyfile and --crtfile", e.message)
+              "Check value passed to the parameters --keyfile and --crtfile", e)
     except Exception as e:
-        if hasattr(e, 'message'):
-            print("Unexpected issue:", e.message)
-        else:
-            print("Unexpected issue:", e)
-
+        print("Unexpected issue:", e)
     finally:
         connection.close()
 
@@ -454,7 +450,6 @@ if __name__ == "__main__":
                         default="client.crt")
     args = parser.parse_args()
 
-    command = ''
     command = args.header + 'Q2'
 
     # IMPORTANT: At this point the 'command' needs to contain something.
