@@ -11,14 +11,11 @@ greatly simplified my work.
 The aim of **payShield2Syslog.py** Python script is to gather the Audit log via the host command **Q2**, interpreter
 the response of the appliance and eventually send it to a syslog facility.
 
-**NOTE**: The project is in a very early development stage and sending the response of the payShield to a syslog facility
-had not been implemented yet.
-
 It requires **Python 3**. It was tested on **Python 3.10**
 
 ## Version
 
-**0.1**
+**0.2**
 
 ## Usage
 
@@ -98,8 +95,9 @@ It's only considered if the protocol is **tls**.
 
 ## NOTES
 
-The project is in a very early development stage and sending the response of the payShield to a syslog facility
-had not been implemented yet.
+- The project is in a very early development stage and not all the functionalities were fully tested.
+- Syslog was tested with Kiwi Syslog in Windows and works.
+- The messages are sent to syslog only if the parameter **--decode** is used.
 
 ## COPYRIGHT & LICENSE
   Please refer to the **LICENSE** file that is part of this project.
