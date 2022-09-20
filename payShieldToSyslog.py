@@ -43,9 +43,6 @@ class PayConnector:
         buffer_size = 4096
         try:
             if self.protocol == 'tcp':
-
-                print("connecting TCP", self.host, self.port)
-                print("sending command", host_command)
                 if not self.connected:
                     self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     self.connection.connect((self.host, self.port))
@@ -72,8 +69,6 @@ class PayConnector:
                 return data
             elif self.protocol == 'udp':
                 if not self.connected:
-                    print("connecting UDP", self.host, self.port)
-                    print("sending command", host_command)
                     # create the UDP socket
                     self.connection = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                     self.connected = True
@@ -109,7 +104,6 @@ class PayConnector:
             self.connection.close()
 
     def __delete__(self, instance):
-        print("delete invoked")
         instance.connection.close()
 
     def __del__(self):
@@ -119,7 +113,7 @@ class PayConnector:
 
 # End Class
 
-def decode_q2(response_to_decode: bytes, head_len: int):
+def decode_q2(response_to_decode: bytes, head_len: int, logger_instance=None):
     """
     It decodes the result of the command Q2 and prints the meaning of the returned output
 
@@ -132,9 +126,9 @@ def decode_q2(response_to_decode: bytes, head_len: int):
 
     Returns
     ___________
-    nothing
+    syslog_entry: the string to eventually send to syslog
     """
-
+    syslog_entry = ''
     SPECIFIC_ERROR: Dict[str, str] = {'35': 'No Audit Records found',
                                       '36': 'All Audit Records have been retrieved'}
 
@@ -144,41 +138,60 @@ def decode_q2(response_to_decode: bytes, head_len: int):
         log_entry = response_to_decode[str_pointer:str_pointer + 80]
         print("Log Entry in Hex: ", log_entry)
         bin_entry = binascii.unhexlify(log_entry)
-        print("Audit Counter: ", int(binascii.hexlify(bin_entry[0:4]).decode(), base=16))
+        audit_counter = int(binascii.hexlify(bin_entry[0:4]).decode(), base=16)
+        print("Audit Counter: ", audit_counter)
+        syslog_entry = str(audit_counter)
         data_value = binascii.hexlify(bin_entry[4:10]).decode()
         date_readable = data_value[:2] + ':' + data_value[2:4] + ':' + data_value[4:6] + \
                         ' ' + data_value[6:8] + '/' + data_value[8:10] + '/20' + \
                         data_value[10:12]
         print("Date: ", date_readable)
+        syslog_entry = syslog_entry + " " + date_readable
         command_action_code = bin_entry[10:12]
         print("Action Code", command_action_code.decode())
+        syslog_entry = syslog_entry + " " + command_action_code.decode()
         bit_mask_str = str(bin(int(binascii.hexlify(bin_entry[12:14]).decode(), base=16))[2:])
         print("Bit Mask", bit_mask_str)
         command_code_type = bit_mask_str[0:2]
         if command_code_type == '00':
             print("\tCommand code type: Host Command")
+            syslog_entry = syslog_entry + " " + "HOST"
         elif command_code_type == '01':
             print("\tCommand code type: Console Command")
+            syslog_entry = syslog_entry + " " + "CLS"
         elif command_code_type == '10':
             print("\tCommand code type:  Fraud Event")
+            syslog_entry = syslog_entry + " " + "FRD"
         elif command_code_type == '11':
             print("\tCommand code type: User Action")
+            syslog_entry = syslog_entry + " " + "USR"
         if bit_mask_str[2:3] == '0':
             print("\tNot Archived")
+            syslog_entry = syslog_entry + " " + "NOTA"
         else:
             print("\tArchived")
+            syslog_entry = syslog_entry + " " + "ARCH"
         if bit_mask_str[3:4] == '0':
             print("\tNot Retrieved")
+            syslog_entry = syslog_entry + " " + "MOTR"
         else:
             print("\tRetrieved")
+            syslog_entry = syslog_entry + " " + "RETV"
         print("\tUnused:", bit_mask_str[4:])
         print("Response Error Code:", bin_entry[14:16].decode())
-        print("Audit Record MAC:", binascii.hexlify(bin_entry[16:16 + 8]).decode().upper())
-        print("Random MAC Key:", binascii.hexlify(bin_entry[24:]).decode().upper())
+        audit_MAC = binascii.hexlify(bin_entry[16:16 + 8]).decode().upper()
+        print("Audit Record MAC:", audit_MAC)
+        syslog_entry = syslog_entry + " " + audit_MAC
+        random_key = binascii.hexlify(bin_entry[24:]).decode().upper()
+        print("Random MAC Key:", random_key)
+        syslog_entry = syslog_entry + " " + random_key
 
     else:
         if SPECIFIC_ERROR.get(response_to_decode[str_pointer:str_pointer + 2]) is not None:
             print("Command specific error: ", SPECIFIC_ERROR.get(response_to_decode[str_pointer:str_pointer + 2]))
+    if logger_instance is not None:
+        logger_instance.info(syslog_entry)
+    return syslog_entry
 
 
 def payshield_error_codes(error_code: str) -> str:
@@ -369,7 +382,7 @@ def hex2ip(hex_ip):
 
 
 def run_test(payConnectorInstance: PayConnector, host_command: str,
-             header_len: int = 4, decoder_funct: FunctionType = None) -> int:
+             header_len: int = 4, decoder_funct: FunctionType = None, logger_instance=None) -> int:
     """
         It connects to the specified host and port, using the specified protocol (tcp, udp or tls) and sends the command.
 
@@ -423,7 +436,7 @@ def run_test(payConnectorInstance: PayConnector, host_command: str,
         if (decoder_funct is not None) and callable(decoder_funct):
             print("")
             print("-----DECODING RESPONSE-----")
-            decoder_funct(data, header_len)
+            decoder_funct(data, header_len, logger_instance)
 
     except ConnectionError as e:
         print("Connection issue: ", e)
@@ -514,6 +527,7 @@ if __name__ == "__main__":
                         default="client.key")
     parser.add_argument("--crtfile", help="client certificate file, used if the protocol is TLS", type=Path,
                         default="client.crt")
+    parser.add_argument("--syslog", help="syslog facility ip address", type=str)
     args = parser.parse_args()
 
     command = args.header + 'Q2'
@@ -542,13 +556,19 @@ if __name__ == "__main__":
         payConnInst = PayConnector(args.host, args.port, args.proto, args.keyfile, args.crtfile)
     else:
         payConnInst = PayConnector(args.host, args.port, args.proto)
+    logger = None
+    if args.syslog is not None:
+        logger = logging.getLogger('mylogger')
+        syslog = logging.handlers.SysLogHandler(address=(args.syslog, 514))
+        syslog.setLevel(logging.INFO)
+        logger.addHandler(syslog)
     if args.forever:
         i = 1
         while True:
             print("Iteration: ", i)
             if args.decode:
                 run_test(payConnInst, command, len(args.header),
-                         DECODERS.get(command[len(args.header):len(args.header) + 2], None))
+                         DECODERS.get(command[len(args.header):len(args.header) + 2], None), logger)
             else:
                 run_test(payConnInst, command, len(args.header), None)
             i = i + 1
@@ -558,7 +578,7 @@ if __name__ == "__main__":
             print("Iteration: ", i + 1, " of ", args.times)
             if args.decode:
                 run_test(payConnInst, command, len(args.header),
-                         DECODERS.get(command[len(args.header):len(args.header) + 2], None))
+                         DECODERS.get(command[len(args.header):len(args.header) + 2], None), logger)
             else:
                 run_test(payConnInst, command, len(args.header), None)
             i = i + 1
