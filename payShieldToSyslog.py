@@ -18,6 +18,107 @@ import logging.handlers
 VERSION = "0.1"
 
 
+# Begin Class
+class PayConnector:
+    def __init__(self, host, port, protocol, keyfile=None, crtfile=None):
+        self.ssl_sock = None
+        self.connection = None
+        self.socket = None
+        self.host = host
+        self.port = port
+        self.protocol = protocol
+        self.connected = False
+        if protocol not in ['udp', 'tcp', 'tls']:
+            raise ValueError("protocol must me udp, tcp or ssl")
+        if protocol == 'ssl':
+            if (keyfile is None) or (crtfile is None):
+                raise ValueError("keyfile and crtfile parameters are both required")
+
+    def connect(self, host_command):
+        size = pack('>h', len(host_command))
+
+        # join everything together in python3
+        message = size + host_command.encode()
+        # Connect to the host and gather the reply in TCP or UDP
+        buffer_size = 4096
+        try:
+            if self.protocol == 'tcp':
+
+                print("connecting TCP", self.host, self.port)
+                print("sending command", host_command)
+                if not self.connected:
+                    self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    self.connection.connect((self.host, self.port))
+                # send message
+                self.connection.send(message)
+                # receive data
+                data = self.connection.recv(buffer_size)
+                self.connected = True
+                return data
+
+            elif self.protocol == "tls":
+                # creates the TCP TLS socket
+                if not self.connected:
+                    self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    ciphers = "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:AES128-GCM-SHA256:AES128-SHA256:HIGH:"
+                    ciphers += "!aNULL:!eNULL:!EXPORT:!DSS:!DES:!RC4:!3DES:!MD5:!PSK"
+                    self.ssl_sock = ssl.wrap_socket(self.connection, self.keyfile, self.crtfile)
+                    self.ssl_sock.connect((self.host, self.port))
+                # send message
+                self.ssl_sock.send(message)
+                # receive data
+                data = self.ssl_sock.recv(buffer_size)
+                self.connected = True
+                return data
+            elif self.protocol == 'udp':
+                if not self.connected:
+                    print("connecting UDP", self.host, self.port)
+                    print("sending command", host_command)
+                    # create the UDP socket
+                    self.connection = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    self.connected = True
+                # send data
+                self.connection.sendto(message, (self.host, self.port))
+                # receive data
+                self.connection.settimeout(5)
+                data_tuple = self.connection.recvfrom(buffer_size)
+                data = data_tuple[0]
+                return data
+
+        except (ConnectionError, TimeoutError) as e:
+            if hasattr(e, 'message'):
+                print("Connection issue: ", e.message)
+            else:
+                print("Connection issue: ", e)
+            self.connected = False
+
+        except FileNotFoundError as e:
+            print("The client certificate file or the client key file cannot be found or accessed.\n" +
+                  "Check value passed to the parameters --keyfile and --crtfile", e)
+
+        except Exception as e:
+            if hasattr(e, 'message'):
+                print("Unexpected issue:", e.message)
+            else:
+                print("Unexpected issue:", e)
+            self.connected = False
+
+    def close(self):
+
+        if self.connected:
+            self.connection.close()
+
+    def __delete__(self, instance):
+        print("delete invoked")
+        instance.connection.close()
+
+    def __del__(self):
+        print("del invoked")
+        self.close()
+
+
+# End Class
+
 def decode_q2(response_to_decode: bytes, head_len: int):
     """
     It decodes the result of the command Q2 and prints the meaning of the returned output
@@ -201,12 +302,14 @@ def check_returned_command_verb(result_returned: bytes, head_len: int, command_s
     """
     Checks if the command returned by the payShield is congruent to the command sent
     Parameters
+
     ----------
-    result_returned: bytes
+
+    :param result_returned: bytes
         The output returned from the payShield
-    head_len: int
+    :param head_len: int
         The length of the header
-    command_sent: str
+    :param command_sent: str
         The command send to the payShield
 
     Returns
@@ -265,73 +368,34 @@ def hex2ip(hex_ip):
     return hex_ip
 
 
-def run_test(ip_addr: str, port: int, host_command: str, proto: str = "tcp", header_len: int = 4,
-             decoder_funct: FunctionType = None) -> int:
-    """It connects to the specified host and port, using the specified protocol (tcp, udp or tls) and sends the command.
+def run_test(payConnectorInstance: PayConnector, host_command: str,
+             header_len: int = 4, decoder_funct: FunctionType = None) -> int:
+    """
+        It connects to the specified host and port, using the specified protocol (tcp, udp or tls) and sends the command.
 
-    Parameters
-    ----------
-     ip_addr: str
-        The address to connect to. It can be an IP, hostname or FQDN
-     port: int
-        The port to connect to
-     host_command: str
-        The command to send to the payShield complete of the header part
-     proto: str
-        The protocol to use, it can be usb, tcp or tls. If not specified the default is tcp
-     header_len: int
-        The length of the header. If not specified the value is 4 because it is the default factory value
-        in payShield 10k
-     decoder_funct: FunctionType
-        If provided needs to be a reference to a function that is able to parse the command and print the meaning of it
-        If not provided the default is None
+        Parameters
+        ___________
+         payConnectorInstance: PayConnector
+            The instance of the PayConnector class
+         host_command: str
+            The command to send to the payShield complete of the header part
+         header_len: int
+            The length of the header. If not specified the value is 4 because it is the default factory value
+            in payShield 10k
+         decoder_funct: FunctionType
+            If provided needs to be a reference to a function that is able to parse the command and print the meaning of it
+            If not provided the default is None
 
-     Returns
-     ----------
-      an integer value representing the error code: -1 means that some parameter were wrong.
+         Returns
+         ___________
+          None
     """
 
-    # if proto != "tcp" and proto != "udp" and proto != "tls":
-    if proto not in ['tcp', 'udp', 'tls']:
-        print("invalid protocol parameter, It needs to be tcp, udp or tls")
-        return -1
     try:
-        # calculate the size and format it correctly
-        size = pack('>h', len(host_command))
+        message_size = pack('>h', len(host_command))
+        message = message_size + host_command.encode()
 
-        # join everything together in python3
-        message = size + host_command.encode()
-        # Connect to the host and gather the reply in TCP or UDP
-        buffer_size = 4096
-        if proto == "tcp":
-            # creates the TCP socket
-            connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            connection.connect((ip_addr, port))
-            # send message
-            connection.send(message)
-            # receive data
-            data = connection.recv(buffer_size)
-        elif proto == "tls":
-            # creates the TCP TLS socket
-            connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            ciphers = "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:AES128-GCM-SHA256:AES128-SHA256:HIGH:"
-            ciphers += "!aNULL:!eNULL:!EXPORT:!DSS:!DES:!RC4:!3DES:!MD5:!PSK"
-            ssl_sock = ssl.wrap_socket(connection, args.keyfile, args.crtfile)
-            ssl_sock.connect((ip_addr, port))
-            # send message
-            ssl_sock.send(message)
-            # receive data
-            data = ssl_sock.recv(buffer_size)
-        elif proto == "udp":
-            # create the UDP socket
-            connection = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            # send data
-            connection.sendto(message, (ip_addr, port))
-            # setting a timeout of 5 seconds, by default, at least on Windows the timeout for the udp socket is infinite
-            connection.settimeout(5)
-            # receive data
-            data_tuple = connection.recvfrom(buffer_size)
-            data = data_tuple[0]
+        data = payConnectorInstance.connect(host_command)
 
         # try to decode the result code contained in the reply of the payShield
         check_result_tuple = (-1, "", "")
@@ -369,7 +433,9 @@ def run_test(ip_addr: str, port: int, host_command: str, proto: str = "tcp", hea
     except Exception as e:
         print("Unexpected issue:", e)
     finally:
-        connection.close()
+        pass
+        # TODO: To revise, I do not want to close every time
+        # payConnectorInstance.close()
 
 
 def common_parser(response_to_decode: bytes, head_len: int) -> Tuple[str, int, int]:
@@ -471,23 +537,30 @@ if __name__ == "__main__":
             print("WARNING: generally the TLS base port is 2500. You are instead using the port ",
                   args.port, " please check that you passed the right value to the "
                              "--port parameter")
-
+    # Let's instance the connection
+    if args.proto == 'tls':
+        payConnInst = PayConnector(args.host, args.port, args.proto, args.keyfile, args.crtfile)
+    else:
+        payConnInst = PayConnector(args.host, args.port, args.proto)
     if args.forever:
         i = 1
         while True:
             print("Iteration: ", i)
             if args.decode:
-                run_test(args.host, args.port, command, args.proto, len(args.header),
+                run_test(payConnInst, command, len(args.header),
                          DECODERS.get(command[len(args.header):len(args.header) + 2], None))
             else:
-                run_test(args.host, args.port, command, args.proto, len(args.header), None)
-
+                run_test(payConnInst, command, len(args.header), None)
             i = i + 1
             print("")
     else:
         for i in range(0, args.times):
             print("Iteration: ", i + 1, " of ", args.times)
-            run_test(args.host, args.port, command, args.proto, len(args.header),
-                     DECODERS.get(command[len(args.header):len(args.header) + 2], None))
+            if args.decode:
+                run_test(payConnInst, command, len(args.header),
+                         DECODERS.get(command[len(args.header):len(args.header) + 2], None))
+            else:
+                run_test(payConnInst, command, len(args.header), None)
+            i = i + 1
             print("")
         print("DONE")
