@@ -8,7 +8,7 @@ greatly simplified my work.
 
 &nbsp;
 
-The aim of **payShield2Syslog.py** Python script is to gather the Audit log via the host command **Q2**, interpreter
+The aim of **payShield2Syslog** project is to gather the Audit log via the host command **Q2**, interpreter
 the response of the appliance and eventually send it to a syslog facility.
 
 It requires **Python 3**. It was tested on **Python 3.10**
