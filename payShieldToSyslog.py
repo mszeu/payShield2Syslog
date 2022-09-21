@@ -398,16 +398,19 @@ def run_test(payConnectorInstance: PayConnector, host_command: str,
 
          Returns
         ___________
+        The return code from the command:
 
-            The return code from the command:
     """
 
     try:
+        return_code_tuple = (None,None)
         message_size = pack('>h', len(host_command))
         message = message_size + host_command.encode()
 
         data = payConnectorInstance.sendCommand(host_command)
-
+        # If no data is returned
+        if data is None:
+            return 'Error'
         # try to decode the result code contained in the reply of the payShield
         check_result_tuple = (-1, "", "")
         return_code_tuple = check_return_message(data, header_len)
@@ -572,7 +575,10 @@ if __name__ == "__main__":
                 return_code = run_test(payConnInst, command, len(args.header), None)
             i = i + 1
             if return_code != '00':
-                print("Return code: ", return_code)
+                if return_code is None:
+                    print("Connection error with the host has occurred")
+                else:
+                    print("Return code: ", return_code)
                 exit()
             print("")
     else:
@@ -586,7 +592,10 @@ if __name__ == "__main__":
                 return_code = run_test(payConnInst, command, len(args.header), None)
             i = i + 1
             if return_code != '00':
-                print("Return code: ", return_code)
+                if return_code is None:
+                    print("Connection error with the host has occurred")
+                else:
+                    print("Return code: ", return_code)
                 exit()
             print("")
         print("DONE")
