@@ -96,8 +96,26 @@ It's only considered if the protocol is **tls**.
 ## NOTES
 
 - The project is in a very early development stage and not all the functionalities were fully tested.
-- Syslog was tested with Kiwi Syslog in Windows and works.
+- Syslog was tested with Kiwi Syslog on Windows 10 and worked.
 - The messages are sent to syslog only if the parameter **--decode** is used.
+- The entry that is sent to syslog has the following format:
+  - Audit Counter
+  - Date and time
+  - Action or Command Code
+  - Command code type:
+    - **HOST**: Host command
+    - **CONS**: Console command
+    - **FRD**:  Fraud
+    - **USER**: User Action
+  - Record archive status:
+    - **NOTA**: Not Archived
+    - **ARCH**: Archived
+  - Record retrieve status:
+    - **RETR**: Retrieved
+    - **NOTR**: Not Retrieved
+  - Audit Record MAC
+  - Random MAC Key
+- **Example**: 78 10:40:43 15/09/2022 73 USER NOTA RETV 48E98471284E57B9 1C7C62DC485953F912380B446566E211
 
 ## COPYRIGHT & LICENSE
   Please refer to the **LICENSE** file that is part of this project.

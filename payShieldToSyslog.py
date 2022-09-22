@@ -155,13 +155,13 @@ def decode_q2(response_to_decode: bytes, head_len: int, logger_instance=None):
             syslog_entry = syslog_entry + " " + "HOST"
         elif command_code_type == '01':
             print("\tCommand code type: Console Command")
-            syslog_entry = syslog_entry + " " + "CLS"
+            syslog_entry = syslog_entry + " " + "CONS"
         elif command_code_type == '10':
             print("\tCommand code type:  Fraud Event")
             syslog_entry = syslog_entry + " " + "FRD"
         elif command_code_type == '11':
             print("\tCommand code type: User Action")
-            syslog_entry = syslog_entry + " " + "USR"
+            syslog_entry = syslog_entry + " " + "USER"
         if bit_mask_str[2:3] == '0':
             print("\tNot Archived")
             syslog_entry = syslog_entry + " " + "NOTA"
@@ -170,10 +170,10 @@ def decode_q2(response_to_decode: bytes, head_len: int, logger_instance=None):
             syslog_entry = syslog_entry + " " + "ARCH"
         if bit_mask_str[3:4] == '0':
             print("\tNot Retrieved")
-            syslog_entry = syslog_entry + " " + "MOTR"
+            syslog_entry = syslog_entry + " " + "NOTR"
         else:
             print("\tRetrieved")
-            syslog_entry = syslog_entry + " " + "RETV"
+            syslog_entry = syslog_entry + " " + "RETR"
         print("\tUnused:", bit_mask_str[4:])
         print("Response Error Code:", bin_entry[14:16].decode())
         audit_MAC = binascii.hexlify(bin_entry[16:16 + 8]).decode().upper()
