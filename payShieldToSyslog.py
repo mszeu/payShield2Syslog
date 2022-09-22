@@ -82,10 +82,7 @@ class PayConnector:
                 return data
 
         except (ConnectionError, TimeoutError) as e:
-            if hasattr(e, 'message'):
-                print("Connection issue: ", e.message)
-            else:
-                print("Connection issue: ", e)
+            print("Connection issue: ", e)
             self.connected = False
 
         except FileNotFoundError as e:
@@ -93,10 +90,7 @@ class PayConnector:
                   "Check value passed to the parameters --keyfile and --crtfile", e)
 
         except Exception as e:
-            if hasattr(e, 'message'):
-                print("Unexpected issue:", e.message)
-            else:
-                print("Unexpected issue:", e)
+            print("Unexpected issue: ", e)
             self.connected = False
 
     def close(self):
@@ -319,15 +313,16 @@ def check_returned_command_verb(result_returned: bytes, head_len: int, command_s
     head_len: int
         The length of the header
     command_sent: str
-        The command send to the payShield
+        The command sent to the payShield
 
     Returns
     ----------
-    :return
-        a Tuple[int, str, str]
-        where the first value is 0 of the command is congruent or -1 if it is not
+
+    a Tuple[int, str, str]
+
+        a Tuple[int, str, str] where the first value is 0 if the command is congruent or -1 if it is not
         the second value is the command sent
-        the third value is the command returned by te payShield
+        the third value is the command returned by the payShield
     """
 
     verb_returned = result_returned[2 + head_len:][:2]
@@ -398,12 +393,12 @@ def run_test(payConnectorInstance: PayConnector, host_command: str,
 
          Returns
         ___________
-        The return code from the command:
 
+            The return code from the command
     """
 
     try:
-        return_code_tuple = (None,None)
+        return_code_tuple = (None, None)
         message_size = pack('>h', len(host_command))
         message = message_size + host_command.encode()
 
@@ -506,7 +501,7 @@ if __name__ == "__main__":
         epilog="For any questions, feedback, suggestions, send money (yes...it's a dream I know) you can contact the "
                "author at msz@msz.eu")
     group = parser.add_mutually_exclusive_group()
-    parser.add_argument("host", help="Ip address or hostname of the payShield")
+    parser.add_argument("host", help="payShield IP address or hostname")
 
     parser.add_argument("--port", "-p", help="The host port", default=1500, type=int)
 
