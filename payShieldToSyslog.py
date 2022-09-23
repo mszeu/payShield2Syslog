@@ -55,7 +55,7 @@ class PayConnector:
             When is False the connection needs to be opened
         """
 
-    def __init__(self, host, port, protocol, keyfile=None, crtfile=None):
+    def __init__(self, host: str, port: int, protocol: str, keyfile: str = None, crtfile: str = None):
         """Constructor for the PayConnector class. It sets all the initial parameters.
 
                 Parameters
