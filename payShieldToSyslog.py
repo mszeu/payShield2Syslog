@@ -36,10 +36,44 @@ VERSION = "0.2"
 
 # Begin Class
 class PayConnector:
+    """It represents the connection with the payShield host port. It supports tcp,udp and tls.
+
+        Attributes
+        ----------
+        ssl_sock : SSLSocket
+            The SSLSocket in case of tls connection.
+        connection  : socket
+            The connection. It should not be accessed directly
+        host : str
+            The host ip or hostname.
+        port : int
+            The tcp/udp port to connect with.
+        protocol: str
+            The protol to use to connect to the host. Can be only tcp, tls or udp.
+        connected: bool
+            When is true the connection has been established already and there is no need to open a new one.
+            When is False the connection needs to be opened
+        """
+
     def __init__(self, host, port, protocol, keyfile=None, crtfile=None):
+        """Constructor for the PayConnector class. It sets all the initial parameters.
+
+                Parameters
+                ----------
+                host : str
+                    The host ip or hostname.
+                port : int
+                    The tcp/udp port to connect with.
+                protocol : str
+                    The protol to use to connect to the host. Can be only tcp, tls or udp.
+                keyfile : str
+                    In case of tls protocol this is the full path of the client key file
+                crtfile : str
+                    In case of tls protocol this is the full path of the client certificate file
+                """
         self.ssl_sock = None
         self.connection = None
-        self.socket = None
+        # self.socket = None
         self.host = host
         self.port = port
         self.protocol = protocol
@@ -50,7 +84,22 @@ class PayConnector:
             if (keyfile is None) or (crtfile is None):
                 raise ValueError("keyfile and crtfile parameters are both required")
 
-    def sendCommand(self, host_command):
+    def sendCommand(self, host_command: str) -> bytes:
+        """
+            sends the command specified in the parameter to the payShield and return the response.
+            If establishes the connection if it's not established yet, otherwire resuses the open conenction
+
+                Parameters
+                ----------
+                host_command : str
+                    The command to send to the payshield host port.
+
+
+                Returns
+                -------
+                bytes
+                    The response from the host.
+        """
         size = pack('>h', len(host_command))
 
         # join everything together in python3
@@ -65,7 +114,7 @@ class PayConnector:
                 # send message
                 self.connection.send(message)
                 # receive data
-                data = self.connection.recv(buffer_size)
+                data: bytes = self.connection.recv(buffer_size)
                 self.connected = True
                 return data
 
@@ -80,7 +129,7 @@ class PayConnector:
                 # send message
                 self.ssl_sock.send(message)
                 # receive data
-                data = self.ssl_sock.recv(buffer_size)
+                data: bytes = self.ssl_sock.recv(buffer_size)
                 self.connected = True
                 return data
             elif self.protocol == 'udp':
@@ -93,7 +142,7 @@ class PayConnector:
                 # receive data
                 self.connection.settimeout(5)
                 data_tuple = self.connection.recvfrom(buffer_size)
-                data = data_tuple[0]
+                data: bytes = data_tuple[0]
                 return data
 
         except (ConnectionError, TimeoutError) as e:
@@ -109,11 +158,17 @@ class PayConnector:
             self.connected = False
 
     def close(self):
+        """It invokes the close method of the connection
+        """
 
         if self.connected:
             self.connection.close()
 
     def __del__(self):
+        """
+        Destructor for the PayConnector class.
+        It invokes the close method of the connection
+        """
         self.close()
 
 
