@@ -214,6 +214,7 @@ def decode_q2(response_to_decode: bytes, head_len: int, logger_instance=None):
         bit_mask_str = str(bin(int(binascii.hexlify(bin_entry[12:14]).decode(), base=16))[2:])
         print("Bit Mask", bit_mask_str)
         command_code_type = bit_mask_str[0:2]
+        command_action_message = get_action_command_message(command_action_code.decode(), command_code_type)
         if command_code_type == '00':
             print("\tCommand code type: Host Command")
             syslog_entry = syslog_entry + " " + "HOST"
@@ -226,6 +227,7 @@ def decode_q2(response_to_decode: bytes, head_len: int, logger_instance=None):
         elif command_code_type == '11':
             print("\tCommand code type: User Action")
             syslog_entry = syslog_entry + " " + "USER"
+        print("\tCommand/Action description:", command_action_message)
         if bit_mask_str[2:3] == '0':
             print("\tNot Archived")
             syslog_entry = syslog_entry + " " + "NOTA"
@@ -370,6 +372,108 @@ def payshield_error_codes(error_code: str) -> str:
     }
 
     return PAYSHIELD_ERROR_CODE.get(error_code, "Unknown error")
+
+
+def get_action_command_message(code: str, code_type: str) -> str:
+    """This function maps the action/command code with its description.
+        I derived the list of actions/commands messages from the following manual:
+        payShield 10K Installation and User Guide 1.7a
+        Date: November 2022
+        Doc. Number: 007-001512-007
+
+        Parameters
+        ----------
+         code: str
+            The action/command code returned from the payShield 10k
+        code_type: str
+            The type of code: action type or command type
+
+         Returns
+         ----------
+          a string containing a descriptive message of the action/command code
+        """
+
+    CONSOLE_COMMAND_ACTIONS = {
+        '00': 'User actions performed using payShield Manager',
+        '01': 'AUDITLOG',
+        '02': 'AUDITOPTIONS',
+        '03': 'CLEARAUDIT',
+        '04': 'CLEARERR',
+        '05': 'EJECT',
+        '06': 'ERRLOG',
+        '07': 'GETCMDS',
+        '08': 'GETTIME',
+        '09': 'SETTIME',
+        '0A': 'A',
+        '0B': 'B',
+        '0C': 'C',
+        '0D': 'D',
+        '0E': 'F',
+        '0F': 'K',
+        '10': 'N',
+        '11': 'R',
+        '12': 'T',
+        '13': 'V',
+        '14': 'Z',
+        '15': '$',
+        '16': 'CONFIGCMDS',
+        '17': 'CONFIGPB',
+        '18': 'PING',
+        '19': 'TRACERT',
+        '1A': 'NETSTAT',
+        '1B': 'AUDITPRINT',
+        '1C': 'SYSLOG',
+        '1D': 'UTILCFG',
+        '1E': 'UTILENABLE',
+        '1F': 'UTISTATS',
+        '20': 'HEALTHENABLE',
+        '21': 'HEALTHSTATS',
+        '22': 'SNMP',
+        '23': 'SNMPADD',
+        '24': 'SNMPDEL',
+        '25': 'RESET',
+        '26': 'ROUTE',
+        '27': 'TRAP',
+        '28': 'TRAPADD',
+        '29': 'TRAPDEL',
+        '2A': 'CONFIGACL'
+    }
+    FRAUD_EVENT = {
+        '01': 'Limit for number of PIN verifications per minute exceeded',
+        '02': 'Limit for number of PIN verifications per hour exceeded',
+        '03': 'Limit for total number of failed PIN verifications exceeded'
+    }
+    AUDITED_USER_ACTIONS = {
+        'A0': 'Authorization Cancelled',
+        'A1': 'Authorization ON',
+        'AA': 'Authorization Activity ON',
+        'AC': 'Authorization Activity Cancelled',
+        'AT': 'Authorization Timeout',
+        'CL': 'Audit log cleared',
+        'DE': 'Diagnostic Event(Selftest)',
+        'KE': 'User authentication',
+        'LE': 'LMK erased',
+        'LF': 'License file load failure',
+        'LL': 'LMK loaded',
+        'LS': 'License file successfully loaded',
+        'OE': 'Old LMK erased',
+        'OF': 'Change to Offline',
+        'OL': 'Old LMK loaded',
+        'ON': 'Change to Online',
+        'PW': 'Cycle power supply',
+        'SE': 'Change to Secure',
+        'UT': 'Utilization Reset'
+    }
+    message = ''
+    if code_type == '11':
+        message = AUDITED_USER_ACTIONS.get(code, "Unknown user action")
+    elif code_type == '10':
+        message = FRAUD_EVENT.get(code, "Unknown fraud action")
+    elif code_type == '01':
+        message = CONSOLE_COMMAND_ACTIONS.get(code, "Unknown console action")
+    elif code_type == '00':
+        message='Host Command'
+    return message
 
 
 def check_returned_command_verb(result_returned: bytes, head_len: int, command_sent: str) -> Tuple[int, str, str]:
