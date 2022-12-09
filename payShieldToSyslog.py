@@ -215,6 +215,7 @@ def decode_q2(response_to_decode: bytes, head_len: int, logger_instance=None):
         print("Bit Mask", bit_mask_str)
         command_code_type = bit_mask_str[0:2]
         command_action_message = get_action_command_message(command_action_code.decode(), command_code_type)
+        syslog_entry = syslog_entry + command_action_message
         if command_code_type == '00':
             print("\tCommand code type: Host Command")
             syslog_entry = syslog_entry + " " + "HOST"
@@ -472,7 +473,7 @@ def get_action_command_message(code: str, code_type: str) -> str:
     elif code_type == '01':
         message = CONSOLE_COMMAND_ACTIONS.get(code, "Unknown console action")
     elif code_type == '00':
-        message='Host Command'
+        message = 'Host Command'
     return message
 
 
