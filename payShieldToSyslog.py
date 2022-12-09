@@ -31,7 +31,7 @@ from types import FunctionType
 import logging
 import logging.handlers
 
-VERSION = "0.2"
+VERSION = "0.3"
 
 
 # Begin Class
@@ -209,7 +209,7 @@ def decode_q2(response_to_decode: bytes, head_len: int, logger_instance=None):
         print("Date: ", date_readable)
         syslog_entry = syslog_entry + " " + date_readable
         command_action_code = bin_entry[10:12]
-        print("Action Code", command_action_code.decode())
+        print("Action Code / Command Code", command_action_code.decode())
         syslog_entry = syslog_entry + " " + command_action_code.decode()
         bit_mask_str = str(bin(int(binascii.hexlify(bin_entry[12:14]).decode(), base=16))[2:])
         print("Bit Mask", bit_mask_str)
