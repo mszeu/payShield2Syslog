@@ -215,7 +215,7 @@ def decode_q2(response_to_decode: bytes, head_len: int, logger_instance=None):
         print("Bit Mask", bit_mask_str)
         command_code_type = bit_mask_str[0:2]
         command_action_message = get_action_command_message(command_action_code.decode(), command_code_type)
-        syslog_entry = syslog_entry + command_action_message
+        syslog_entry = syslog_entry + ' ' + command_action_message
         if command_code_type == '00':
             print("\tCommand code type: Host Command")
             syslog_entry = syslog_entry + " " + "HOST"
@@ -258,7 +258,7 @@ def decode_q2(response_to_decode: bytes, head_len: int, logger_instance=None):
     return syslog_entry
 
 
-def payshield_error_codes(error_code: str) -> str:
+def get_payshield_error_message(error_code: str) -> str:
     """This function maps the result code with the error message.
         I derived the list of errors and messages from the following manual:
         payShield 10K Core Host Commands v1
@@ -535,7 +535,7 @@ def check_return_message(result_returned: bytes, head_len: int) -> Tuple[str, st
         return "ZZ", "Unknown message result code parsing error"
 
     # try to describe the error
-    return ret_code, payshield_error_codes(ret_code)
+    return ret_code, get_payshield_error_message(ret_code)
 
 
 def test_printable(input_str):
@@ -683,7 +683,8 @@ if __name__ == "__main__":
     parser.add_argument("--header",
                         help="the header string to prepend to the host command. If not specified the default is HEAD.",
                         default="HEAD", type=str)
-    group.add_argument("--forever", help="if this option is specified the program runs for ever.",
+    group.add_argument("--allentries", help="when specified all log entries are retrieved or until an error is  "
+                                            "returned.",
                        action="store_true")
     parser.add_argument("--decode", help="if specified the reply of the payShield is interpreted "
                                          "if a decoder function for that command has been implemented.",
@@ -733,7 +734,7 @@ if __name__ == "__main__":
         logger.setLevel(logging.DEBUG)
         syslog.setLevel(logging.INFO)
         logger.addHandler(syslog)
-    if args.forever:
+    if args.allentries:
         i = 1
         while True:
             print("Iteration: ", i)
@@ -748,7 +749,7 @@ if __name__ == "__main__":
                 if return_code is None:
                     print("Connection error with the host has occurred")
                 else:
-                    print("Return code: ", return_code)
+                    print("Return code: ", get_payshield_error_message(return_code))
                 exit()
             print("")
     else:
@@ -765,7 +766,7 @@ if __name__ == "__main__":
                 if return_code is None:
                     print("Connection error with the host has occurred")
                 else:
-                    print("Return code: ", return_code)
+                    print("Return code: ", get_payshield_error_message(return_code))
                 exit()
             print("")
         print("DONE")
