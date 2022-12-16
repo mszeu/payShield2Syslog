@@ -30,8 +30,9 @@ from typing import Tuple, Dict
 from types import FunctionType
 import logging
 import logging.handlers
+from sys import exit  # It is needed by the executable version
 
-VERSION = "0.3.1"
+VERSION = "0.3.2"
 
 
 # Begin Class
@@ -214,7 +215,7 @@ def decode_q2(response_to_decode: bytes, head_len: int, logger_instance=None):
         bit_mask_str = str(bin(int(binascii.hexlify(bin_entry[12:14]).decode(), base=16))[2:])
         print("Bit Mask", bit_mask_str)
         command_code_type = bit_mask_str[0:2]
-        response_error_code=bin_entry[14:16].decode()
+        response_error_code = bin_entry[14:16].decode()
         if command_code_type != '10':  # It is not a fraud event
             command_action_message = get_action_command_message(command_action_code.decode(), command_code_type)
         else:
@@ -474,9 +475,9 @@ def get_action_command_message(code: str, code_type: str) -> str:
     }
     message = ''
     if code_type == '11':
-        message = AUDITED_USER_ACTIONS.get(code, "Unknown user action")
+        message = AUDITED_USER_ACTIONS.get(code, "Unknown user action " + code)
     elif code_type == '10':
-        message = FRAUD_EVENT.get(code, "Unknown fraud action")
+        message = FRAUD_EVENT.get(code, "Unknown fraud action " + code)
     elif code_type == '01':
         message = CONSOLE_COMMAND_ACTIONS.get(code, code)
     elif code_type == '00':
