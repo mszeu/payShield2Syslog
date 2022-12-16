@@ -15,7 +15,9 @@ It requires **Python 3**. It was tested on **Python 3.10**
 
 ## Version
 
-**0.3.1**
+
+**0.3.2**
+
 
 ## Usage
 
