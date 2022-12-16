@@ -19,7 +19,7 @@ It requires **Python 3**. It was tested on **Python 3.10**
 
 ## Usage
 
-    usage: payShieldToSyslog.py [-h] [--port PORT] [--header HEADER] [--forever] [--decode] [--times TIMES]
+    usage: payShieldToSyslog.py [-h] [--port PORT] [--header HEADER] [--allentries] [--decode] [--times TIMES]
                                 [--proto {tcp,udp,tls}] [--keyfile KEYFILE] [--crtfile CRTFILE] [--syslog SYSLOG]
                                 [--syslogport SYSLOGPORT] host
 
@@ -29,7 +29,7 @@ It requires **Python 3**. It was tested on **Python 3.10**
 
 ### Mutually exclusive parameters
 
-**--times** and **--forever** are mutually exclusive.
+**--times** and **--allentries** are mutually exclusive.
 
 ### Optional parameters
 
@@ -47,7 +47,7 @@ It's only considered if the protocol is **tls**.
 
 **--header** the header string to prefix to the host command, if not specified the default value is **HEAD**.
 
-**--forever** the test will run forever or if a result code different form 00 is returned from the payShield. Use **CTRL-C** to terminate it.
+**--allentries** when specified all log entries are retrieved. In case of errors it terminates. Use **CTRL-C** to terminate it prematurely.
 
 **--times** how many times execute the test. If it is not specified the default value is **1** time.
 
