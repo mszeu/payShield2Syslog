@@ -2,11 +2,11 @@
 
 <a href="https://www.jetbrains.com/?from=payShiled2Syslog"><img src=images/jetbrains-variant-3.png width=100></a>
 Many thanks to <a href="https://www.jetbrains.com/?from=PayshieldPPressureTest">JetBrains</a> for giving us the <b>Open
-Source License</b> for free with the full access to their developer suite.
+Source License</b> for free with the full access to their developer suite until September 2022.
 <a href="https://www.jetbrains.com/pycharm/?from=payShiled2Syslog">PyCharm</a> is an awesome Python IDE that
 greatly simplified my work.
 
-&nbsp;
+<img src=images/supporting-member-badge.png width=100>
 
 The aim of **payShield2Syslog** project is to gather the Audit log via the host command **Q2**, interpreter
 the response of the appliance and eventually send it to a syslog facility.
