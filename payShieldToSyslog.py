@@ -18,19 +18,17 @@
 #     Please refer to the LICENSE file for more information about licensing
 #     and to README.md file for more information about the usage of it
 
+import argparse
+import binascii
+import logging.handlers
 import socket
 import ssl
-import binascii
 import string
-import types
-from struct import *
-import argparse
 from pathlib import Path
-from typing import Tuple, Dict
-from types import FunctionType
-import logging
-import logging.handlers
+from struct import *
 from sys import exit  # It is needed by the executable version
+from types import FunctionType
+from typing import Tuple, Dict
 
 VERSION = "0.3.2"
 
@@ -707,6 +705,10 @@ if __name__ == "__main__":
                         default="client.crt")
     parser.add_argument("--syslog", help="syslog facility ip address", type=str)
     parser.add_argument("--syslogport", help="syslog UDP port", type=int, default=514)
+    parser.add_argument("--syslogproto", help="protocol to use for syslog. Can be udp or tcp. If this parameter is not "
+                                              "specified the default is tcp", choices=["tcp", "udp"], default="udp",
+                        type=str.lower)
+
     args = parser.parse_args()
 
     command = args.header + 'Q2'
@@ -737,8 +739,11 @@ if __name__ == "__main__":
         payConnInst = PayConnector(args.host, args.port, args.proto)
     logger = None
     if args.syslog is not None:
+        proto_socket_type = socket.SOCK_DGRAM
+        if args.syslogproto == "tcp":
+            proto_socket_type = socket.SOCK_STREAM
         logger = logging.getLogger('mylogger')
-        syslog = logging.handlers.SysLogHandler(address=(args.syslog, args.syslogport))
+        syslog = logging.handlers.SysLogHandler(address=(args.syslog, args.syslogport), socktype=proto_socket_type)
         logger.setLevel(logging.DEBUG)
         syslog.setLevel(logging.INFO)
         logger.addHandler(syslog)
