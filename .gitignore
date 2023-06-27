@@ -1,7 +1,2 @@
 /.idea
-/build/
-/dist/
-/build.bat
-/log.ico
-/payShieldToSyslog.spec
-/version.txt
+/win-build/
