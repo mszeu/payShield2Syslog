@@ -88,7 +88,7 @@ class PayConnector:
     def sendCommand(self, host_command: str) -> bytes:
         """
             sends the command specified in the parameter to the payShield and return the response.
-            If establishes the connection if it's not established yet, otherwire resuses the open conenction
+            If establishes the connection if it's not established yet, otherwise reuses the open connection
 
                 Parameters
                 ----------
