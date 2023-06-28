@@ -82,7 +82,7 @@ class PayConnector:
         self.connected = False
         if protocol not in ['udp', 'tcp', 'tls']:
             raise ValueError("protocol must me udp, tcp or ssl")
-        if protocol == 'ssl':
+        if protocol == 'tls':
             if (keyfile is None) or (crtfile is None):
                 raise ValueError("keyfile and crtfile parameters are both required")
 
@@ -129,7 +129,7 @@ class PayConnector:
                     self.context.check_hostname = False
                     self.context.verify_mode = ssl.CERT_NONE
                     self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    self.ssl_sock = self.context.wrap_socket(self.connection, erver_side=False)
+                    self.ssl_sock = self.context.wrap_socket(self.connection, server_side=False)
                     self.ssl_sock.connect((self.host, self.port))
                 # send message
                 self.ssl_sock.send(message)
