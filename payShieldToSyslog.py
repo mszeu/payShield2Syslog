@@ -1,7 +1,7 @@
 #     The aim of payShield2Syslog project is to gather the Audit log via the host command Q2,
 #     interpreter the response of the appliance and eventually send it to a syslog facility.
 #
-#     Copyright (C) 2022  Marco Simone Zuppone - msz@msz.eu
+#     Copyright (C) 2023  Marco Simone Zuppone - msz@msz.eu
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU Affero General Public License as published
@@ -30,7 +30,7 @@ from sys import exit  # It is needed by the executable version
 from types import FunctionType
 from typing import Tuple, Dict
 
-VERSION = "0.3.2"
+VERSION = "0.4.1"
 
 
 # Begin Class
@@ -70,8 +70,11 @@ class PayConnector:
                 crtfile : str
                     In case of tls protocol this is the full path of the client certificate file
                 """
+        self.keyfile = keyfile
+        self.crtfile = crtfile
         self.ssl_sock = None
         self.connection = None
+        self.context = None
         # self.socket = None
         self.host = host
         self.port = port
@@ -120,10 +123,13 @@ class PayConnector:
             elif self.protocol == "tls":
                 # creates the TCP TLS socket
                 if not self.connected:
+                    # Let's srt uo the context
+                    self.context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+                    self.context.load_cert_chain(certfile=self.crtfile, keyfile=self.keyfile)
+                    self.context.check_hostname = False
+                    self.context.verify_mode = ssl.CERT_NONE
                     self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    ciphers = "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:AES128-GCM-SHA256:AES128-SHA256:HIGH:"
-                    ciphers += "!aNULL:!eNULL:!EXPORT:!DSS:!DES:!RC4:!3DES:!MD5:!PSK"
-                    self.ssl_sock = ssl.wrap_socket(self.connection, self.keyfile, self.crtfile)
+                    self.ssl_sock = self.context.wrap_socket(self.connection, erver_side=False)
                     self.ssl_sock.connect((self.host, self.port))
                 # send message
                 self.ssl_sock.send(message)
@@ -682,7 +688,7 @@ if __name__ == "__main__":
         epilog="For any questions, feedback, suggestions, donations (yes...I'm a dreamer, I know) you can contact the "
                "author at msz@msz.eu")
     group = parser.add_mutually_exclusive_group()
-    parser.add_argument("host", help="payShield IP address or hostname")
+    parser.add_argument("host", help="payShield IP address or hostname.")
 
     parser.add_argument("--port", "-p", help="The host port", default=1500, type=int)
 
@@ -696,17 +702,17 @@ if __name__ == "__main__":
                                          "if a decoder function for that command has been implemented.",
                         action="store_true")
 
-    group.add_argument("--times", help="how many time to repeat the operation", type=int, default=1)
-    parser.add_argument("--proto", help="accepted value are tcp or udp, the default is tcp", default="tcp",
+    group.add_argument("--times", help="how many time to repeat the operation.", type=int, default=1)
+    parser.add_argument("--proto", help="accepted value are tcp or udp, the default is tcp.", default="tcp",
                         choices=["tcp", "udp", "tls"], type=str.lower)
-    parser.add_argument("--keyfile", help="client key file, used if the protocol is TLS", type=Path,
+    parser.add_argument("--keyfile", help="client key file, used if the protocol is TLS.", type=Path,
                         default="client.key")
-    parser.add_argument("--crtfile", help="client certificate file, used if the protocol is TLS", type=Path,
+    parser.add_argument("--crtfile", help="client certificate file, used if the protocol is TLS.", type=Path,
                         default="client.crt")
-    parser.add_argument("--syslog", help="syslog facility ip address", type=str)
-    parser.add_argument("--syslogport", help="syslog UDP port", type=int, default=514)
+    parser.add_argument("--syslog", help="syslog facility ip address.", type=str)
+    parser.add_argument("--syslogport", help="syslog port.", type=int, default=514)
     parser.add_argument("--syslogproto", help="protocol to use for syslog. Can be udp or tcp. If this parameter is not "
-                                              "specified the default is tcp", choices=["tcp", "udp"], default="udp",
+                                              "specified the default is tcp.", choices=["tcp", "udp"], default="udp",
                         type=str.lower)
 
     args = parser.parse_args()
