@@ -57,7 +57,9 @@ It's only considered if the protocol is **tls**.
 
 **--syslog** The address of the syslog facility
 
-**--syslogport** The UDP syslog port
+**--syslogport** The syslog port. If not specified the port is **514**.
+
+**--syslogproto** It can be **tcp** or **udp**. If not specified the default is **udp*
 
 ## Example
 
@@ -123,7 +125,7 @@ It's only considered if the protocol is **tls**.
   Please refer to the **LICENSE** file that is part of this project.
   The license is **[AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0.en.html)**
   
-  Copyright(C) 2022 **Marco S. Zuppone** - **msz@msz.eu** - [https://msz.eu](https://msz.eu)
+  Copyright(C) 2023 **Marco S. Zuppone** - **msz@msz.eu** - [https://msz.eu](https://msz.eu)
 
 This program is free software: you can redistribute it and/or modify  
 it under the terms of the GNU Affero General Public License as  
