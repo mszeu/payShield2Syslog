@@ -30,7 +30,7 @@ from sys import exit  # It is needed by the executable version
 from types import FunctionType
 from typing import Tuple, Dict
 
-VERSION = "0.4.1"
+VERSION = "0.4.2"
 
 
 # Begin Class
@@ -51,7 +51,13 @@ class PayConnector:
             The protol to use to connect to the host. Can be only tcp, tls or udp.
         connected: bool
             When is true the connection has been established already and there is no need to open a new one.
-            When is False the connection needs to be opened
+            When is False the connection needs to be opened.
+        keyfile : str
+            In case of tls protocol this is the full path of the client key file.
+        crtfile : str
+            In case of tls protocol this is the full path of the client certificate file.
+        context : ssl.SSLContext
+            The SSLContext object
         """
 
     def __init__(self, host: str, port: int, protocol: str, keyfile: str = None, crtfile: str = None):
@@ -66,9 +72,9 @@ class PayConnector:
                 protocol : str
                     The protol to use to connect to the host. Can be only tcp, tls or udp.
                 keyfile : str
-                    In case of tls protocol this is the full path of the client key file
+                    In case of tls protocol this is the full path of the client key file.
                 crtfile : str
-                    In case of tls protocol this is the full path of the client certificate file
+                    In case of tls protocol this is the full path of the client certificate file.
                 """
         self.keyfile = keyfile
         self.crtfile = crtfile
