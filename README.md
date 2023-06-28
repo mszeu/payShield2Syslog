@@ -59,12 +59,12 @@ It's only considered if the protocol is **tls**.
 
 **--syslogport** The syslog port. If not specified the port is **514**.
 
-**--syslogproto** It can be **tcp** or **udp**. If not specified the default is **udp*
+**--syslogproto** It can be **tcp** or **udp**. If not specified the default is **udp**
 
 ## Example
 
     C:>python.exe payShieldToSyslog.py 192.168.0.36 --decode 
-    PayShield Audit Log utility, version 0.1, by Marco S. Zuppone - msz@msz.eu - https://msz.eu
+    PayShield Audit Log utility, version 0.4.2, by Marco S. Zuppone - msz@msz.eu - https://msz.eu
     To get more info about the usage invoke it with the -h option
     This software is open source and it is under the Affero AGPL 3.0 license
     
