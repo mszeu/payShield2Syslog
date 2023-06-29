@@ -16,18 +16,18 @@ It requires **Python 3**. It was tested on **Python 3.10**
 ## Version
 
 
-**0.3.2**
+**0.4.2**
 
 
 ## Usage
 
     usage: payShieldToSyslog.py [-h] [--port PORT] [--header HEADER] [--allentries] [--decode] [--times TIMES]
                                 [--proto {tcp,udp,tls}] [--keyfile KEYFILE] [--crtfile CRTFILE] [--syslog SYSLOG]
-                                [--syslogport SYSLOGPORT] host
+                                [--syslogport SYSLOGPORT] [--syslogproto {udp,tcp}] host
 
 ### Mandatory parameter(s)
 
-**host** *ip address* or the *hostname/fqdn* of the **payShield** appliance.
+**host** *ip address* or the *hostname/fqdn* of the **payShield** host port.
 
 ### Mutually exclusive parameters
 
@@ -37,8 +37,9 @@ It requires **Python 3**. It was tested on **Python 3.10**
 
 **--port** specifies the host port, if omitted the default value **1500** is used.
 
-**--proto** specifies the protocol to use, **tcp**, **udp** or **tls**, if omitted the default value **tcp**
+**--proto** specifies the protocol to use, **tcp**, **udp** or **tls**, if omitted the default value is **tcp**
 is used.  
+
 If **tls** is used you might specify the path of the client key file and the certificate using the parameters **--keyfile** and **--crtfile**.
 
 **--keyfile** the path of the client key file, if is not specified the default value is **client.key**.  
@@ -55,11 +56,11 @@ It's only considered if the protocol is **tls**.
 
 **--decode** decodes the response of the payShield and, if a syslog facility is specified the message is sent to syslog.
 
-**--syslog** The address of the syslog facility
+**--syslog** *ip address* or the *hostname/fqdn* of the address of the syslog facility.
 
 **--syslogport** The syslog port. If not specified the port is **514**.
 
-**--syslogproto** It can be **tcp** or **udp**. If not specified the default is **udp**
+**--syslogproto** It can be **tcp** or **udp**. If not specified the default is **udp**.
 
 ## Example
 
@@ -99,8 +100,8 @@ It's only considered if the protocol is **tls**.
 
 ## NOTES
 
-- The project is in a very early development stage and not all the functionalities were fully tested.
-- Syslog was tested with Kiwi Syslog on Windows 10 and worked.
+- The project is still in development stage and not all the functionalities are fully tested.
+- For testing the Syslog functionality I used Kiwi Syslog on Windows 10 and worked fine.
 - The messages are sent to syslog only if the parameter **--decode** is used.
 - The entry that is sent to syslog has the following format:
   - Audit Counter
@@ -138,4 +139,4 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.** See the
 **GNU Affero General Public License** for more details.
 
 ## Questions, bugs & suggestions
-For any questions, feedback, suggestions, send money ***(yes...it's a dream, I know)*** you can contact the author at [msz@msz.eu](mailto:msz@msz.eu)
+For any questions, feedback, suggestions, send money ***(yes...it's a dream, I know)*** you can contact the author at [msz@msz.eu](mailto:msz@msz.eu).
