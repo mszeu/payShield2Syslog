@@ -30,7 +30,7 @@ from sys import exit  # It is needed by the executable version
 from types import FunctionType
 from typing import Tuple, Dict
 
-VERSION = "0.4.2"
+VERSION = "0.4.2d"
 
 
 # Begin Class
@@ -274,6 +274,37 @@ def decode_q2(response_to_decode: bytes, head_len: int, logger_instance=None):
     if logger_instance is not None:
         logger_instance.info(syslog_entry)
     return syslog_entry
+
+
+def decode_q6(response_to_decode: bytes, head_len: int, logger_instance=None):
+    """
+    It decodes the result of the command Q2 and prints the meaning of the returned output
+
+    Parameters
+    ___________
+    response_to_decode: bytes
+        The response returned by the payShield
+    head_len: int
+        The length of the header
+
+    Returns
+    ___________
+    syslog_entry: the string to eventually send to syslog
+    """
+    decoded_reply = ''
+    SPECIFIC_ERROR: Dict[str, str] = {'35': 'No Audit Records found',
+                                      '36': 'No matching audit records found',
+                                      '68': 'Command disabled'}
+
+    response_to_decode, msg_len, str_pointer = common_parser(response_to_decode, head_len)
+    if response_to_decode[str_pointer:str_pointer + 2] == '00':  # No errors
+        str_pointer = str_pointer + 2
+        num_deleted = response_to_decode[str_pointer:str_pointer + 4]
+        print("Deleted Count: ", num_deleted)
+    else:
+        if SPECIFIC_ERROR.get(response_to_decode[str_pointer:str_pointer + 2]) is not None:
+            print("Command specific error: ", SPECIFIC_ERROR.get(response_to_decode[str_pointer:str_pointer + 2]))
+    return decoded_reply
 
 
 def get_payshield_error_message(error_code: str) -> str:
@@ -685,7 +716,8 @@ if __name__ == "__main__":
     # If the parameter is not passed because a decoder for that command it is not defined the default value of the
     # parameter assumes the value of None
     DECODERS = {
-        'Q2': decode_q2
+        'Q2': decode_q2,
+        'Q6': decode_q6
     }
 
     parser = argparse.ArgumentParser(
@@ -701,14 +733,16 @@ if __name__ == "__main__":
     parser.add_argument("--header",
                         help="the header string to prepend to the host command. If not specified the default is HEAD.",
                         default="HEAD", type=str)
-    group.add_argument("--allentries", help="when specified all log entries are retrieved or until an error is  "
-                                            "returned.",
+    group.add_argument("--allentries",
+                       help="when specified all log entries are retrieved or until an error is returned.",
                        action="store_true")
     parser.add_argument("--decode", help="if specified the reply of the payShield is interpreted "
                                          "if a decoder function for that command has been implemented.",
                         action="store_true")
 
     group.add_argument("--times", help="how many time to repeat the operation.", type=int, default=1)
+    group.add_argument("--delretrieved", help="delete the retrieved records", action="store_true")
+    group.add_argument("--delarchived", help="delete the archived records", action="store_true")
     parser.add_argument("--proto", help="accepted value are tcp or udp, the default is tcp.", default="tcp",
                         choices=["tcp", "udp", "tls"], type=str.lower)
     parser.add_argument("--keyfile", help="client key file, used if the protocol is TLS.", type=Path,
@@ -718,12 +752,16 @@ if __name__ == "__main__":
     parser.add_argument("--syslog", help="syslog facility ip address.", type=str)
     parser.add_argument("--syslogport", help="syslog port.", type=int, default=514)
     parser.add_argument("--syslogproto", help="protocol to use for syslog. Can be udp or tcp. If this parameter is not "
-                                              "specified the default is tcp.", choices=["tcp", "udp"], default="udp",
+                                              "specified the default is udp.", choices=["tcp", "udp"], default="udp",
                         type=str.lower)
 
     args = parser.parse_args()
 
     command = args.header + 'Q2'
+    if args.delretrieved:
+        command = args.header + 'Q60'
+    elif args.delarchived:
+         command = args.header + 'Q61'
 
     # IMPORTANT: At this point the 'command' needs to contain something.
     # If you want to add to the tool command link arguments about commands do it before this comment block
