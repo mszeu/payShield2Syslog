@@ -10,18 +10,21 @@ greatly simplified my work.
 
 The aim of **payShield2Syslog** project is to gather the Audit log via the host command **Q2**, interpreter
 the response of the appliance and eventually send it to a syslog facility.
+The utility can delete the audit log entries from the appliance using the host command **Q6**.
+Remember that to use the host command **Q6** the authorisation must be granted to the appliance.
 
-It requires **Python 3**. It was tested on **Python 3.10**
+It requires **Python 3**. It was tested on **Python 3.13** and **payShield 10k FW 3.0a**
 
 ## Version
 
 
-**0.4.2**
+**0.5**
 
 
 ## Usage
 
     usage: payShieldToSyslog.py [-h] [--port PORT] [--header HEADER] [--allentries] [--decode] [--times TIMES]
+                                [--delretrieved] [--delarchived]
                                 [--proto {tcp,udp,tls}] [--keyfile KEYFILE] [--crtfile CRTFILE] [--syslog SYSLOG]
                                 [--syslogport SYSLOGPORT] [--syslogproto {udp,tcp}] host
 
@@ -42,19 +45,23 @@ is used.
 
 If **tls** is used you might specify the path of the client key file and the certificate using the parameters **--keyfile** and **--crtfile**.
 
-**--keyfile** the path of the client key file, if is not specified the default value is **client.key**.  
+**--keyfile** the path of the client key file, if it is not specified, the default value is **client.key**.  
 It's only considered if the protocol is **tls**.
 
-**--crtfile** the path of the client certificate file, if is not specified the default value is **client.crt**.  
+**--crtfile** the path of the client certificate file, if it is not specified the default value is **client.crt**.  
 It's only considered if the protocol is **tls**.
 
 **--header** the header string to prefix to the host command, if not specified the default value is **HEAD**.
 
 **--allentries** when specified all log entries are retrieved. In case of errors it terminates. Use **CTRL-C** to terminate it prematurely.
 
-**--times** how many times execute the test. If it is not specified the default value is **1** time.
+**--delretrieved** when specified only the retrieved log entries are deleted from the appliance.
 
-**--decode** decodes the response of the payShield and, if a syslog facility is specified the message is sent to syslog.
+**--delarchived** when specified only the archived log entries are deleted from the appliance.
+
+**--times** how many times execute the test. If it is not specified, the default value is **1** time.
+
+**--decode** decodes the response of the payShield and, if a syslog facility is specified, the message is sent to syslog.
 
 **--syslog** *ip address* or the *hostname/fqdn* of the address of the syslog facility.
 
@@ -65,7 +72,7 @@ It's only considered if the protocol is **tls**.
 ## Example
 
     C:>python.exe payShieldToSyslog.py 192.168.0.36 --decode 
-    PayShield Audit Log utility, version 0.4.2, by Marco S. Zuppone - msz@msz.eu - https://msz.eu
+    PayShield Audit Log utility, version 0.5, by Marco S. Zuppone - msz@msz.eu - https://msz.eu
     To get more info about the usage invoke it with the -h option
     This software is open source and it is under the Affero AGPL 3.0 license
     
@@ -100,10 +107,10 @@ It's only considered if the protocol is **tls**.
 
 ## NOTES
 
-- The project is still in development stage and not all the functionalities are fully tested.
-- For testing the Syslog functionality I used Kiwi Syslog on Windows 10 and worked fine.
+- The project is still in development stage, and not all the functionalities are fully tested.
+- For testing the Syslog functionality, I used Kiwi Syslog on Windows 10 and it worked fine.
 - The messages are sent to syslog only if the parameter **--decode** is used.
-- The entry that is sent to syslog has the following format:
+- The entry sent to syslog has the following format:
   - Audit Counter
   - Date and time
   - Action or Command Code

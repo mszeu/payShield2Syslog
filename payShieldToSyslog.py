@@ -1,7 +1,7 @@
 #     The aim of payShield2Syslog project is to gather the Audit log via the host command Q2,
 #     interpreter the response of the appliance and eventually send it to a syslog facility.
 #
-#     Copyright (C) 2023  Marco Simone Zuppone - msz@msz.eu
+#     Copyright (C) 2026  Marco Simone Zuppone - msz@msz.eu
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU Affero General Public License as published
@@ -31,7 +31,7 @@ from sys import exit  # It is needed by the executable version
 from types import FunctionType
 from typing import Tuple, Dict
 
-VERSION = "0.4.2d"
+VERSION = "0.5"
 
 
 # Begin Class
