@@ -279,7 +279,7 @@ def decode_q2(response_to_decode: bytes, head_len: int, logger_instance=None):
 
 def decode_q6(response_to_decode: bytes, head_len: int, logger_instance=None):
     """
-    It decodes the result of the command Q2 and prints the meaning of the returned output
+    It decodes the result of the command Q6 and prints the meaning of the returned output
 
     Parameters
     ___________
@@ -295,7 +295,8 @@ def decode_q6(response_to_decode: bytes, head_len: int, logger_instance=None):
     decoded_reply = ''
     SPECIFIC_ERROR: Dict[str, str] = {'35': 'No Audit Records found',
                                       '36': 'No matching audit records found',
-                                      '68': 'Command disabled'}
+                                      '68': 'Command disabled',
+                                      '17': 'HSM not authorized, or operation prohibited by security settings'}
 
     response_to_decode, msg_len, str_pointer = common_parser(response_to_decode, head_len)
     if response_to_decode[str_pointer:str_pointer + 2] == '00':  # No errors
@@ -522,9 +523,9 @@ def get_action_command_message(code: str, code_type: str) -> str:
                             '58': 'Initial security settings modified', '59': 'SNMP state changed',
                             '60': 'SNMP port changed', '63': 'SNMP user added ', '64': 'SNMP user deleted',
                             '65': 'VR info retrieved ', '66': 'Licensing info retrieved',
-                            '67': 'Firmware update attempted', '68': 'License updated ',
-                            '69': 'Utilstats settings modified', '70': 'Utilstats state changed ',
-                            '71': 'Utilstats reset', '72': 'Miscellaneous settings modified ',
+                            '67': 'Firmware update attempted', '68': 'License updated',
+                            '69': 'Utilstats settings modified', '70': 'Utilstats state changed',
+                            '71': 'Utilstats reset', '72': 'Miscellaneous settings modified',
                             '73': 'Multiple authorized state changed', '74': 'Whitelist modified',
                             '75': 'Session timeout settings modified', '76': 'Keychange new LMK installed',
                             '77': 'Management TLS certificate imported', '78': 'Host TLS certificate imported',
