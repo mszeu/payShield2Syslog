@@ -24,13 +24,14 @@ import logging.handlers
 import socket
 import ssl
 import string
+from email.policy import default
 from pathlib import Path
 from struct import *
 from sys import exit  # It is needed by the executable version
 from types import FunctionType
 from typing import Tuple, Dict
 
-VERSION = "0.4.2"
+VERSION = "0.4.2d"
 
 
 # Begin Class
@@ -87,12 +88,12 @@ class PayConnector:
         self.protocol = protocol
         self.connected = False
         if protocol not in ['udp', 'tcp', 'tls']:
-            raise ValueError("protocol must me udp, tcp or ssl")
+            raise ValueError("protocol must me udp, tcp or tls")
         if protocol == 'tls':
             if (keyfile is None) or (crtfile is None):
                 raise ValueError("keyfile and crtfile parameters are both required")
 
-    def sendCommand(self, host_command: str) -> bytes:
+    def sendCommand(self, host_command: str) -> bytes | None:
         """
             sends the command specified in the parameter to the payShield and return the response.
             If establishes the connection if it's not established yet, otherwise reuses the open connection
@@ -274,6 +275,38 @@ def decode_q2(response_to_decode: bytes, head_len: int, logger_instance=None):
     if logger_instance is not None:
         logger_instance.info(syslog_entry)
     return syslog_entry
+
+
+def decode_q6(response_to_decode: bytes, head_len: int, logger_instance=None):
+    """
+    It decodes the result of the command Q6 and prints the meaning of the returned output
+
+    Parameters
+    ___________
+    response_to_decode: bytes
+        The response returned by the payShield
+    head_len: int
+        The length of the header
+
+    Returns
+    ___________
+    syslog_entry: the string to eventually send to syslog
+    """
+    decoded_reply = ''
+    SPECIFIC_ERROR: Dict[str, str] = {'35': 'No Audit Records found',
+                                      '36': 'No matching audit records found',
+                                      '68': 'Command disabled',
+                                      '17': 'HSM not authorized, or operation prohibited by security settings'}
+
+    response_to_decode, msg_len, str_pointer = common_parser(response_to_decode, head_len)
+    if response_to_decode[str_pointer:str_pointer + 2] == '00':  # No errors
+        str_pointer = str_pointer + 2
+        num_deleted = response_to_decode[str_pointer:str_pointer + 4]
+        print("Deleted Count: ", num_deleted)
+    else:
+        if SPECIFIC_ERROR.get(response_to_decode[str_pointer:str_pointer + 2]) is not None:
+            print("Command specific error: ", SPECIFIC_ERROR.get(response_to_decode[str_pointer:str_pointer + 2]))
+    return decoded_reply
 
 
 def get_payshield_error_message(error_code: str) -> str:
@@ -462,27 +495,52 @@ def get_action_command_message(code: str, code_type: str) -> str:
         '02': 'Limit for number of PIN verifications per hour exceeded',
         '03': 'Limit for total number of failed PIN verifications exceeded'
     }
-    AUDITED_USER_ACTIONS = {
-        'A0': 'Authorization Cancelled',
-        'A1': 'Authorization ON',
-        'AA': 'Authorization Activity ON',
-        'AC': 'Authorization Activity Cancelled',
-        'AT': 'Authorization Timeout',
-        'CL': 'Audit log cleared',
-        'DE': 'Diagnostic Event(Selftest)',
-        'KE': 'User authentication',
-        'LE': 'LMK erased',
-        'LF': 'License file load failure',
-        'LL': 'LMK loaded',
-        'LS': 'License file successfully loaded',
-        'OE': 'Old LMK erased',
-        'OF': 'Change to Offline',
-        'OL': 'Old LMK loaded',
-        'ON': 'Change to Online',
-        'PW': 'Cycle power supply',
-        'SE': 'Change to Secure',
-        'UT': 'Utilization Reset'
-    }
+    AUDITED_USER_ACTIONS = {'02': 'Client - Login', '03': 'Client - Logout', '04': 'Session terminated',
+                            '05': 'Single authorized state entered', '06': 'Single authorized state cancelled',
+                            '07': 'CTA generated', '08': 'CTA share created on smartcard',
+                            '09': 'CTA share read from smartcard', '10': 'RACC commissioned',
+                            '11': 'Left RACC prepared for commissioning', '12': 'HSM commissioned',
+                            '13': 'CTA share loaded from smartcard', '14': 'CTA share stored on smartcard',
+                            '15': 'Right RACC prepared for commissioning',
+                            '16': 'Periodic diagnostic self tests schedule changed', '17': 'Diagnostic tests executed',
+                            '18': 'Alarm settings modified', '19': 'HSM date and time updated',
+                            '22': 'PIN block settings modified', '23': 'Fraud settings modified',
+                            '24': 'Fraud detection re-enabled', '25': 'Enabled host commands modified',
+                            '26': 'Enabled console commands modified', '27': 'Audit settings modified',
+                            '28': 'Host commands audit modified', '29': 'Console commands audit modified',
+                            '30': 'Remote management commands audit modified',
+                            '31': 'Health statistics report generated ', '32': 'Health statistics reset ',
+                            '33': 'HRK passphrases set', '34': 'HRK passphrase 1 changed',
+                            '35': 'HRK passphrase 2 changed', '36': 'General host settings modified',
+                            '37': 'Ethernet host settings modified', '39': 'ACL host settings modified',
+                            '40': 'Error log cleared', '41': 'Error log retrieved', '42': 'Error log downloaded',
+                            '43': 'Audit log cleared', '44': 'Audit log retrieved', '45': 'Audit log downloaded',
+                            '46': 'New LMK installed', '47': 'Keychange old LMK installed', '48': 'New LMK deleted',
+                            '49': 'Keychange LMK deleted', '50': 'LMK generated', '51': 'LMK copied',
+                            '52': 'LMK verified', '53': 'Authorizing officer card created',
+                            '54': 'Management interface settings modified', '55': 'Printer settings modified',
+                            '56': 'Test page printed', '57': 'General security settings modified',
+                            '58': 'Initial security settings modified', '59': 'SNMP state changed',
+                            '60': 'SNMP port changed', '63': 'SNMP user added ', '64': 'SNMP user deleted',
+                            '65': 'VR info retrieved ', '66': 'Licensing info retrieved',
+                            '67': 'Firmware update attempted', '68': 'License updated',
+                            '69': 'Utilstats settings modified', '70': 'Utilstats state changed',
+                            '71': 'Utilstats reset', '72': 'Miscellaneous settings modified',
+                            '73': 'Multiple authorized state changed', '74': 'Whitelist modified',
+                            '75': 'Session timeout settings modified', '76': 'Keychange new LMK installed',
+                            '77': 'Management TLS certificate imported', '78': 'Host TLS certificate imported',
+                            '79': 'LMK share loaded', '80': 'LMK share stored', '81': 'LMK split',
+                            '82': 'LMK reassembled', '83': 'LMK password loaded', '84': 'LMK password stored',
+                            '85': 'HSM settings loaded from smartcard', '86': 'HSM settings saved to smartcard',
+                            '87': 'HSM settings reset to factory state', '88': 'HSM reboot requested',
+                            'A0': 'Authorization Cancelled', 'A1': 'Authorization ON',
+                            'AA': 'Authorization Activity ON', 'AC': 'Authorization Activity Cancelled',
+                            'AT': 'Authorization Timeout', 'CL': 'Audit log cleared',
+                            'DE': 'Diagnostic Event(Selftest)', 'KE': 'User authentication', 'LE': 'LMK erased',
+                            'LF': 'License file load failure', 'LL': 'LMK loaded',
+                            'LS': 'License file successfully loaded', 'OE': 'Old LMK erased', 'OF': 'Change to Offline',
+                            'OL': 'Old LMK loaded', 'ON': 'Change to Online', 'PW': 'Cycle power supply',
+                            'SE': 'Change to Secure', 'UT': 'Utilization Reset'}
     message = ''
     if code_type == '11':
         message = AUDITED_USER_ACTIONS.get(code, "Unknown user action " + code)
@@ -685,7 +743,8 @@ if __name__ == "__main__":
     # If the parameter is not passed because a decoder for that command it is not defined the default value of the
     # parameter assumes the value of None
     DECODERS = {
-        'Q2': decode_q2
+        'Q2': decode_q2,
+        'Q6': decode_q6
     }
 
     parser = argparse.ArgumentParser(
@@ -701,14 +760,16 @@ if __name__ == "__main__":
     parser.add_argument("--header",
                         help="the header string to prepend to the host command. If not specified the default is HEAD.",
                         default="HEAD", type=str)
-    group.add_argument("--allentries", help="when specified all log entries are retrieved or until an error is  "
-                                            "returned.",
+    group.add_argument("--allentries",
+                       help="when specified all log entries are retrieved or until an error is returned.",
                        action="store_true")
     parser.add_argument("--decode", help="if specified the reply of the payShield is interpreted "
                                          "if a decoder function for that command has been implemented.",
-                        action="store_true")
+                        action="store_true", default=True)
 
     group.add_argument("--times", help="how many time to repeat the operation.", type=int, default=1)
+    group.add_argument("--delretrieved", help="delete the retrieved records", action="store_true")
+    group.add_argument("--delarchived", help="delete the archived records", action="store_true")
     parser.add_argument("--proto", help="accepted value are tcp or udp, the default is tcp.", default="tcp",
                         choices=["tcp", "udp", "tls"], type=str.lower)
     parser.add_argument("--keyfile", help="client key file, used if the protocol is TLS.", type=Path,
@@ -718,12 +779,16 @@ if __name__ == "__main__":
     parser.add_argument("--syslog", help="syslog facility ip address.", type=str)
     parser.add_argument("--syslogport", help="syslog port.", type=int, default=514)
     parser.add_argument("--syslogproto", help="protocol to use for syslog. Can be udp or tcp. If this parameter is not "
-                                              "specified the default is tcp.", choices=["tcp", "udp"], default="udp",
+                                              "specified the default is udp.", choices=["tcp", "udp"], default="udp",
                         type=str.lower)
 
     args = parser.parse_args()
 
     command = args.header + 'Q2'
+    if args.delretrieved:
+        command = args.header + 'Q60'
+    elif args.delarchived:
+        command = args.header + 'Q61'
 
     # IMPORTANT: At this point the 'command' needs to contain something.
     # If you want to add to the tool command link arguments about commands do it before this comment block
