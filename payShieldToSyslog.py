@@ -763,10 +763,6 @@ if __name__ == "__main__":
     group.add_argument("--allentries",
                        help="when specified all log entries are retrieved or until an error is returned.",
                        action="store_true")
-    parser.add_argument("--decode", help="if specified the reply of the payShield is interpreted "
-                                         "if a decoder function for that command has been implemented.",
-                        action="store_true", default=True)
-
     group.add_argument("--times", help="how many time to repeat the operation.", type=int, default=1)
     group.add_argument("--delretrieved", help="delete the retrieved records", action="store_true")
     group.add_argument("--delarchived", help="delete the archived records", action="store_true")
@@ -828,12 +824,8 @@ if __name__ == "__main__":
         i = 1
         while True:
             print("Iteration: ", i)
-            return_code = ''
-            if args.decode:
-                return_code = run_test(payConnInst, command, len(args.header),
-                                       DECODERS.get(command[len(args.header):len(args.header) + 2], None), logger)
-            else:
-                return_code = run_test(payConnInst, command, len(args.header), None)
+            return_code = run_test(payConnInst, command, len(args.header),
+                                   DECODERS.get(command[len(args.header):len(args.header) + 2], None), logger)
             i = i + 1
             if return_code != '00':
                 if return_code is None:
@@ -846,11 +838,8 @@ if __name__ == "__main__":
         for i in range(0, args.times):
             print("Iteration: ", i + 1, " of ", args.times)
             return_code = ''
-            if args.decode:
-                return_code = run_test(payConnInst, command, len(args.header),
+            return_code = run_test(payConnInst, command, len(args.header),
                                        DECODERS.get(command[len(args.header):len(args.header) + 2], None), logger)
-            else:
-                return_code = run_test(payConnInst, command, len(args.header), None)
             i = i + 1
             if return_code != '00':
                 if return_code is None:
