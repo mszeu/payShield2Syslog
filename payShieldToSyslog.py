@@ -35,7 +35,7 @@ VERSION = "0.5"
 
 # Begin Class
 class PayConnector:
-    """It represents the connection with the payShield host port. It supports tcp,udp and tls.
+    """It represents the connection with the payShield host port. It supports tcp,udp,and tls.
 
         Attributes
         ----------
@@ -361,6 +361,8 @@ def get_payshield_error_message(error_code: str) -> str:
         '31': 'Insufficient solicitation entries for batch',
         '32': 'AES not licensed',
         '33': 'LMK key change storage is corrupted',
+        '35': 'No Audit Records found',
+        '36': 'All Audit Records have been retrieved',
         '39': 'Fraud detection',
         '40': 'Invalid checksum',
         '41': 'Internal hardware/software error: bad RAM, invalid error codes, etc.',
@@ -629,7 +631,7 @@ def hex2ip(hex_ip):
 def run_test(payConnectorInstance: PayConnector, host_command: str,
              header_len: int = 4, decoder_funct: FunctionType = None, logger_instance=None) -> str:
     """
-        It connects to the specified host and port, using the specified protocol (tcp, udp or tls) and sends the command.
+        It connects to the specified host and port, using the specified protocol (tcp, udp, or tls) and sends the command.
 
         Parameters
         ___________
@@ -787,6 +789,8 @@ if __name__ == "__main__":
         parser.error("--header must be a string not longer than 255 characters.")
     if args.port <0 or args.port > 65535:
         parser.error("--port must be a positive integer between 0 and 65535.")
+    if args.syslogport < 0 or args.port > 65535:
+            parser.error("--syslogport must be a positive integer between 0 and 65535.")
     command = args.header + 'Q2'
     if args.delretrieved:
         command = args.header + 'Q60'
