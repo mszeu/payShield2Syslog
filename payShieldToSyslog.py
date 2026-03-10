@@ -30,7 +30,7 @@ from sys import exit  # It is needed by the executable version
 from types import FunctionType
 from typing import Tuple, Dict, Any
 
-VERSION = "0.5"
+VERSION = "0.5.1"
 
 
 # Begin Class
