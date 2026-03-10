@@ -24,12 +24,11 @@ import logging.handlers
 import socket
 import ssl
 import string
-from email.policy import default
 from pathlib import Path
 from struct import pack
 from sys import exit  # It is needed by the executable version
 from types import FunctionType
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Any
 
 VERSION = "0.5"
 
@@ -49,19 +48,19 @@ class PayConnector:
         port : int
             The tcp/udp port to connect with.
         protocol: str
-            The protol to use to connect to the host. Can be only tcp, tls or udp.
+            The protol to use to connect to the host. Can be only tcp, tls, or udp.
         connected: bool
-            When is true the connection has been established already and there is no need to open a new one.
-            When is False the connection needs to be opened.
+            When it is True the connection has been established already and there is no need to open a new one.
+            When it is False the connection needs to be opened.
         keyfile : str
-            In case of tls protocol this is the full path of the client key file.
+            In the case of tls protocol, this is the full path of the client key file.
         crtfile : str
-            In case of tls protocol this is the full path of the client certificate file.
+            In the case of tls protocol, this is the full path of the client certificate file.
         context : ssl.SSLContext
             The SSLContext object
         """
 
-    def __init__(self, host: str, port: int, protocol: str, keyfile: str = None, crtfile: str = None):
+    def __init__(self, host: str, port: int, protocol: str, keyfile: str | None = None, crtfile: str | None = None):
         """Constructor for the PayConnector class. It sets all the initial parameters.
 
                 Parameters
@@ -73,9 +72,9 @@ class PayConnector:
                 protocol : str
                     The protol to use to connect to the host. Can be only tcp, tls or udp.
                 keyfile : str
-                    In case of tls protocol this is the full path of the client key file.
+                    In the case of tls protocol, this is the full path of the client key file.
                 crtfile : str
-                    In case of tls protocol this is the full path of the client certificate file.
+                    In the case of tls protocol, this is the full path of the client certificate file.
                 """
         self.keyfile = keyfile
         self.crtfile = crtfile
@@ -174,7 +173,10 @@ class PayConnector:
         """
 
         if self.connected:
+            if self.ssl_sock:
+                self.ssl_sock.close()
             self.connection.close()
+            self.connected = False
 
     def __del__(self):
         """
@@ -327,7 +329,7 @@ def get_payshield_error_message(error_code: str) -> str:
           a string containing the message of the error code
         """
 
-    PAYSHIELD_ERROR_CODE = {
+    PAYSHIELD_ERROR_CODE: dict[str, str] = {
         '00': 'No error',
         '01': 'Verification failure or warning of imported key parity error',
         '02': 'Key inappropriate length for algorithm',
@@ -779,7 +781,12 @@ if __name__ == "__main__":
                         type=str.lower)
 
     args = parser.parse_args()
-
+    if args.times <= 0:
+        parser.error("--times must be a positive integer (greater than 0).")
+    if len(args.header) > 255:
+        parser.error("--header must be a string not longer than 255 characters.")
+    if args.port <0 or args.port > 65535:
+        parser.error("--port must be a positive integer between 0 and 65535.")
     command = args.header + 'Q2'
     if args.delretrieved:
         command = args.header + 'Q60'
@@ -839,8 +846,8 @@ if __name__ == "__main__":
             print("Iteration: ", i + 1, " of ", args.times)
             return_code = ''
             return_code = run_test(payConnInst, command, len(args.header),
-                                       DECODERS.get(command[len(args.header):len(args.header) + 2], None), logger)
-            i = i + 1
+                                   DECODERS.get(command[len(args.header):len(args.header) + 2], None), logger)
+            #i = i + 1
             if return_code != '00':
                 if return_code is None:
                     print("Connection error with the host has occurred")
