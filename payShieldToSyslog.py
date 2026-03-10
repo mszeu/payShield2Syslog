@@ -26,7 +26,7 @@ import ssl
 import string
 from email.policy import default
 from pathlib import Path
-from struct import *
+from struct import pack
 from sys import exit  # It is needed by the executable version
 from types import FunctionType
 from typing import Tuple, Dict
