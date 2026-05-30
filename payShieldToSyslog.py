@@ -225,7 +225,9 @@ def decode_q2(response_to_decode: bytes, head_len: int, logger_instance=None):
         command_action_code = bin_entry[10:12]
         print("Action Code / Command Code", command_action_code.decode())
         syslog_entry = syslog_entry + " " + command_action_code.decode()
-        bit_mask_str = str(bin(int(binascii.hexlify(bin_entry[12:14]).decode(), base=16))[2:])
+        # bit_mask_str = str(bin(int(binascii.hexlify(bin_entry[12:14]).decode(), base=16))[2:]) #possibly faulty
+        raw_int = int(binascii.hexlify(bin_entry[12:14]).decode(), base=16)
+        bit_mask_str = format(raw_int, '016b')
         print("Bit Mask", bit_mask_str)
         command_code_type = bit_mask_str[0:2]
         response_error_code = bin_entry[14:16].decode()
@@ -789,7 +791,7 @@ if __name__ == "__main__":
         parser.error("--header must be a string not longer than 255 characters.")
     if args.port < 0 or args.port > 65535:
         parser.error("--port must be a positive integer between 0 and 65535.")
-    if args.syslogport < 0 or args.port > 65535:
+    if args.syslogport < 0 or args.syslogport > 65535:
         parser.error("--syslogport must be a positive integer between 0 and 65535.")
     command = args.header + 'Q2'
     if args.delretrieved:
