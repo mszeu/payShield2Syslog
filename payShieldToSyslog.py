@@ -787,10 +787,10 @@ if __name__ == "__main__":
         parser.error("--times must be a positive integer (greater than 0).")
     if len(args.header) > 255:
         parser.error("--header must be a string not longer than 255 characters.")
-    if args.port <0 or args.port > 65535:
+    if args.port < 0 or args.port > 65535:
         parser.error("--port must be a positive integer between 0 and 65535.")
     if args.syslogport < 0 or args.port > 65535:
-            parser.error("--syslogport must be a positive integer between 0 and 65535.")
+        parser.error("--syslogport must be a positive integer between 0 and 65535.")
     command = args.header + 'Q2'
     if args.delretrieved:
         command = args.header + 'Q60'
