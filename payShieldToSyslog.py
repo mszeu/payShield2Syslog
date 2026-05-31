@@ -137,6 +137,7 @@ class PayConnector:
             if self.protocol == 'tcp':
                 if not self.connected:
                     self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    self.connection.settimeout(30)
                     self.connection.connect((self.host, self.port))
                     self.connected = True
                 self.connection.send(message)
@@ -152,6 +153,7 @@ class PayConnector:
                     self.context.check_hostname = False
                     self.context.verify_mode = ssl.CERT_NONE
                     self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    self.connection.settimeout(30)
                     self.ssl_sock = self.context.wrap_socket(self.connection, server_side=False)
                     self.ssl_sock.connect((self.host, self.port))
                     self.connected = True
@@ -172,7 +174,7 @@ class PayConnector:
 
         except (ConnectionError, TimeoutError) as e:
             print("Connection issue: ", e)
-            logger.exception("Socket Connection issue: " + str(e))
+            print("Socket Connection issue: " + str(e))
             self._force_close()
 
         except FileNotFoundError as e:
@@ -190,7 +192,7 @@ class PayConnector:
 
         except Exception as e:
             print("Unexpected issue: ", e)
-            logger.exception("Unexpected socket issue")
+            print("Unexpected socket issue")
             self._force_close()
 
         return None
