@@ -276,7 +276,7 @@ def decode_q2(response_to_decode: bytes, head_len: int, logger_instance=None):
     else:
         if SPECIFIC_ERROR.get(response_to_decode[str_pointer:str_pointer + 2]) is not None:
             print("Command specific error: ", SPECIFIC_ERROR.get(response_to_decode[str_pointer:str_pointer + 2]))
-    if logger_instance is not None:
+    if logger_instance is not None and syslog_entry != '':
         logger_instance.info(syslog_entry)
     return syslog_entry
 
@@ -624,12 +624,6 @@ def test_printable(input_str):
     return all(c in string.printable for c in input_str)
 
 
-def hex2ip(hex_ip):
-    addr_long = int(hex_ip, 16)
-    hex_ip = socket.inet_ntoa(pack(">L", addr_long))
-    return hex_ip
-
-
 def run_test(payConnectorInstance: PayConnector, host_command: str,
              header_len: int = 4, decoder_funct: FunctionType = None, logger_instance=None) -> str:
     """
@@ -656,9 +650,6 @@ def run_test(payConnectorInstance: PayConnector, host_command: str,
 
     try:
         return_code_tuple = (None, None)
-        message_size = pack('>h', len(host_command))
-        message = message_size + host_command.encode()
-
         data = payConnectorInstance.sendCommand(host_command)
         # If no data is returned
         if data is None:
@@ -798,13 +789,6 @@ if __name__ == "__main__":
         command = args.header + 'Q60'
     elif args.delarchived:
         command = args.header + 'Q61'
-
-    # IMPORTANT: At this point the 'command' needs to contain something.
-    # If you want to add to the tool command link arguments about commands do it before this comment block
-    # Now we verify if the command variable is empty. In this case we throw an error.
-    if len(command) == 0:
-        print("You forgot to specify the action you want to to perform on the payShield")
-        exit()
     if args.proto == 'tls':
         # check that the cert and key files are accessible
         if not (args.keyfile.exists() and args.crtfile.exists()):
@@ -853,7 +837,7 @@ if __name__ == "__main__":
             return_code = ''
             return_code = run_test(payConnInst, command, len(args.header),
                                    DECODERS.get(command[len(args.header):len(args.header) + 2], None), logger)
-            #i = i + 1
+            # i = i + 1
             if return_code != '00':
                 if return_code is None:
                     print("Connection error with the host has occurred")
