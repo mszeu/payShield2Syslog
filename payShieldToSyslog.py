@@ -30,161 +30,255 @@ from sys import exit  # It is needed by the executable version
 from types import FunctionType
 from typing import Tuple, Dict, Any
 
-VERSION = "0.5.1"
+VERSION = "0.6.0"
 
 
 # Begin Class
 class PayConnector:
-    """It represents the connection with the payShield host port. It supports tcp,udp,and tls.
+    """Represents the connection with the payShield host port.
 
-        Attributes
+    Supports tcp, udp, and tls transport.
+
+    Attributes
+    ----------
+    ssl_sock : ssl.SSLSocket
+        The SSLSocket in case of a tls connection.
+    connection : socket.socket
+        The underlying socket. Should not be accessed directly.
+    host : str
+        The host IP address or hostname.
+    port : int
+        The TCP/UDP port to connect to.
+    protocol : str
+        Transport protocol: ``'tcp'``, ``'tls'``, or ``'udp'``.
+    connected : bool
+        ``True`` when an open connection already exists and can be reused.
+    keyfile : str | None
+        Full path to the client key file (TLS only).
+    crtfile : str | None
+        Full path to the client certificate file (TLS only).
+    context : ssl.SSLContext | None
+        The SSLContext object (TLS only).
+    """
+
+    def __init__(
+            self,
+            host: str,
+            port: int,
+            protocol: str,
+            keyfile: str | None = None,
+            crtfile: str | None = None,
+    ):
+        """Initialise a PayConnector instance.
+
+        Parameters
         ----------
-        ssl_sock : SSLSocket
-            The SSLSocket in case of tls connection.
-        connection  : socket
-            The connection. It should not be accessed directly
         host : str
-            The host ip or hostname.
+            The host IP address or hostname.
         port : int
-            The tcp/udp port to connect with.
-        protocol: str
-            The protol to use to connect to the host. Can be only tcp, tls, or udp.
-        connected: bool
-            When it is True the connection has been established already and there is no need to open a new one.
-            When it is False the connection needs to be opened.
-        keyfile : str
-            In the case of tls protocol, this is the full path of the client key file.
-        crtfile : str
-            In the case of tls protocol, this is the full path of the client certificate file.
-        context : ssl.SSLContext
-            The SSLContext object
+            The TCP/UDP port to connect to.
+        protocol : str
+            Transport protocol: ``'tcp'``, ``'tls'``, or ``'udp'``.
+        keyfile : str, optional
+            Full path to the client key file (required when *protocol* is
+            ``'tls'``).
+        crtfile : str, optional
+            Full path to the client certificate file (required when *protocol*
+            is ``'tls'``).
+
+        Raises
+        ------
+        ValueError
+            If *protocol* is not ``'tcp'``, ``'tls'``, or ``'udp'``.
+        ValueError
+            If *protocol* is ``'tls'`` but *keyfile* or *crtfile* is omitted.
         """
-
-    def __init__(self, host: str, port: int, protocol: str, keyfile: str | None = None, crtfile: str | None = None):
-        """Constructor for the PayConnector class. It sets all the initial parameters.
-
-                Parameters
-                ----------
-                host : str
-                    The host ip or hostname.
-                port : int
-                    The tcp/udp port to connect with.
-                protocol : str
-                    The protol to use to connect to the host. Can be only tcp, tls or udp.
-                keyfile : str
-                    In the case of tls protocol, this is the full path of the client key file.
-                crtfile : str
-                    In the case of tls protocol, this is the full path of the client certificate file.
-                """
         self.keyfile = keyfile
         self.crtfile = crtfile
         self.ssl_sock = None
         self.connection = None
         self.context = None
-        # self.socket = None
         self.host = host
         self.port = port
         self.protocol = protocol
         self.connected = False
-        if protocol not in ['udp', 'tcp', 'tls']:
-            raise ValueError("protocol must me udp, tcp or tls")
-        if protocol == 'tls':
-            if (keyfile is None) or (crtfile is None):
-                raise ValueError("keyfile and crtfile parameters are both required")
 
-    def sendCommand(self, host_command: str) -> bytes | None:
-        """
-            sends the command specified in the parameter to the payShield and return the response.
-            If establishes the connection if it's not established yet, otherwise reuses the open connection
+        if protocol not in ('udp', 'tcp', 'tls'):
+            raise ValueError("protocol must be udp, tcp or tls")
+        if protocol == 'tls' and (keyfile is None or crtfile is None):
+            raise ValueError("keyfile and crtfile parameters are both required")
 
-                Parameters
-                ----------
-                host_command : str
-                    The command to send to the payshield host port.
+    # ------------------------------------------------------------------
+    # Public interface
+    # ------------------------------------------------------------------
 
+    def send_command(self, host_command: str) -> bytes | None:
+        """Send *host_command* to the payShield and return the raw response.
 
-                Returns
-                -------
-                bytes
-                    The response from the host.
+        Establishes the connection the first time it is called; subsequent
+        calls reuse the open socket.
+
+        Parameters
+        ----------
+        host_command : str
+            The host command string to send (without the two-byte length
+            prefix — that is prepended automatically).
+
+        Returns
+        -------
+        bytes | None
+            The raw response bytes (including the two-byte length prefix),
+            or ``None`` on error.
         """
         size = pack('>h', len(host_command))
-
-        # join everything together in python3
         message = size + host_command.encode()
-        # Connect to the host and gather the reply in TCP or UDP
-        buffer_size = 4096
+
         try:
             if self.protocol == 'tcp':
                 if not self.connected:
                     self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    self.connection.settimeout(30)
                     self.connection.connect((self.host, self.port))
-                # send message
+                    self.connected = True
                 self.connection.send(message)
-                # receive data
-                data: bytes = self.connection.recv(buffer_size)
-                self.connected = True
+                raw_len = self._recv_exact(self.connection, 2)
+                expected_len = int.from_bytes(raw_len, byteorder='big')
+                data: bytes = raw_len + self._recv_exact(self.connection, expected_len)
                 return data
 
-            elif self.protocol == "tls":
-                # creates the TCP TLS socket
+            elif self.protocol == 'tls':
                 if not self.connected:
-                    # Let's srt uo the context
                     self.context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
                     self.context.load_cert_chain(certfile=self.crtfile, keyfile=self.keyfile)
                     self.context.check_hostname = False
                     self.context.verify_mode = ssl.CERT_NONE
                     self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    self.connection.settimeout(30)
                     self.ssl_sock = self.context.wrap_socket(self.connection, server_side=False)
                     self.ssl_sock.connect((self.host, self.port))
-                # send message
+                    self.connected = True
                 self.ssl_sock.send(message)
-                # receive data
-                data: bytes = self.ssl_sock.recv(buffer_size)
-                self.connected = True
+                raw_len = self._recv_exact(self.ssl_sock, 2)
+                expected_len = int.from_bytes(raw_len, byteorder='big')
+                data = raw_len + self._recv_exact(self.ssl_sock, expected_len)
                 return data
+
             elif self.protocol == 'udp':
                 if not self.connected:
-                    # create the UDP socket
                     self.connection = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    self.connection.settimeout(5)
                     self.connected = True
-                # send data
                 self.connection.sendto(message, (self.host, self.port))
-                # receive data
-                self.connection.settimeout(5)
-                data_tuple = self.connection.recvfrom(buffer_size)
-                data: bytes = data_tuple[0]
-                return data
+                data_tuple = self.connection.recvfrom(65507)
+                return data_tuple[0]
 
         except (ConnectionError, TimeoutError) as e:
             print("Connection issue: ", e)
-            self.connected = False
+            print("Socket Connection issue: " + str(e))
+            self._force_close()
 
         except FileNotFoundError as e:
-            print("The client certificate file or the client key file cannot be found or accessed.\n" +
-                  "Check value passed to the parameters --keyfile and --crtfile", e)
+            print(
+                "The client certificate file or the client key file cannot be "
+                "found or accessed.\n"
+                "Check value passed to the parameters --keyfile and --crtfile",
+                e,
+            )
+            self._force_close()
+
+        except ssl.SSLError as e:
+            self._force_close()
+            raise ssl.SSLError("TLS connection error: ", e)
 
         except Exception as e:
             print("Unexpected issue: ", e)
-            self.connected = False
+            print("Unexpected socket issue")
+            self._force_close()
 
-    def close(self):
-        """It invokes the close method of the connection
-        """
+        return None
 
+    def close(self) -> None:
+        """Close the active connection, if any."""
         if self.connected:
             if self.ssl_sock:
                 self.ssl_sock.close()
             self.connection.close()
             self.connected = False
 
-    def __del__(self):
-        """
-        Destructor for the PayConnector class.
-        It invokes the close method of the connection
+    # ------------------------------------------------------------------
+    # Context-manager support
+    # ------------------------------------------------------------------
+
+    def __enter__(self) -> "PayConnector":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+        """Close the connection when leaving a ``with`` block.
+
+        Returns ``False`` so that any exception is propagated normally.
         """
         self.close()
+        return False
 
+    def __del__(self) -> None:
+        """Fallback cleanup when the instance is garbage-collected.
+
+        For guaranteed cleanup, prefer using ``PayConnector`` as a context
+        manager (``with`` statement).
+        """
+        if hasattr(self, 'connection') and self.connection:
+            self.close()
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    def _force_close(self) -> None:
+        """Force-close all sockets and reset connection state.
+
+        Called internally after errors to prevent file-descriptor leaks.
+        """
+        self.connected = False
+        if self.ssl_sock:
+            try:
+                self.ssl_sock.close()
+            except Exception:
+                pass
+            self.ssl_sock = None
+        if self.connection:
+            try:
+                self.connection.close()
+            except Exception:
+                pass
+            self.connection = None
+
+    def _recv_exact(self, sock, num_bytes: int) -> bytes:
+        """Read exactly *num_bytes* bytes from *sock*, handling partial reads.
+
+        Parameters
+        ----------
+        sock : socket.socket | ssl.SSLSocket
+            The socket to read from.
+        num_bytes : int
+            The exact number of bytes to receive.
+
+        Returns
+        -------
+        bytes
+            The received data.
+
+        Raises
+        ------
+        ConnectionError
+            If the connection closes before all bytes arrive.
+        """
+        data = b''
+        while len(data) < num_bytes:
+            chunk = sock.recv(num_bytes - len(data))
+            if not chunk:
+                raise ConnectionError("Connection closed before all data was received")
+            data += chunk
+        return data
 
 # End Class
 
@@ -225,7 +319,9 @@ def decode_q2(response_to_decode: bytes, head_len: int, logger_instance=None):
         command_action_code = bin_entry[10:12]
         print("Action Code / Command Code", command_action_code.decode())
         syslog_entry = syslog_entry + " " + command_action_code.decode()
-        bit_mask_str = str(bin(int(binascii.hexlify(bin_entry[12:14]).decode(), base=16))[2:])
+        # bit_mask_str = str(bin(int(binascii.hexlify(bin_entry[12:14]).decode(), base=16))[2:]) #possibly faulty
+        raw_int = int(binascii.hexlify(bin_entry[12:14]).decode(), base=16)
+        bit_mask_str = format(raw_int, '016b')
         print("Bit Mask", bit_mask_str)
         command_code_type = bit_mask_str[0:2]
         response_error_code = bin_entry[14:16].decode()
@@ -274,7 +370,7 @@ def decode_q2(response_to_decode: bytes, head_len: int, logger_instance=None):
     else:
         if SPECIFIC_ERROR.get(response_to_decode[str_pointer:str_pointer + 2]) is not None:
             print("Command specific error: ", SPECIFIC_ERROR.get(response_to_decode[str_pointer:str_pointer + 2]))
-    if logger_instance is not None:
+    if logger_instance is not None and syslog_entry != '':
         logger_instance.info(syslog_entry)
     return syslog_entry
 
@@ -622,12 +718,6 @@ def test_printable(input_str):
     return all(c in string.printable for c in input_str)
 
 
-def hex2ip(hex_ip):
-    addr_long = int(hex_ip, 16)
-    hex_ip = socket.inet_ntoa(pack(">L", addr_long))
-    return hex_ip
-
-
 def run_test(payConnectorInstance: PayConnector, host_command: str,
              header_len: int = 4, decoder_funct: FunctionType = None, logger_instance=None) -> str:
     """
@@ -656,8 +746,7 @@ def run_test(payConnectorInstance: PayConnector, host_command: str,
         return_code_tuple = (None, None)
         message_size = pack('>h', len(host_command))
         message = message_size + host_command.encode()
-
-        data = payConnectorInstance.sendCommand(host_command)
+        data = payConnectorInstance.send_command(host_command)
         # If no data is returned
         if data is None:
             return 'Error'
@@ -789,20 +878,13 @@ if __name__ == "__main__":
         parser.error("--header must be a string not longer than 255 characters.")
     if args.port < 0 or args.port > 65535:
         parser.error("--port must be a positive integer between 0 and 65535.")
-    if args.syslogport < 0 or args.port > 65535:
+    if args.syslogport < 0 or args.syslogport > 65535:
         parser.error("--syslogport must be a positive integer between 0 and 65535.")
     command = args.header + 'Q2'
     if args.delretrieved:
         command = args.header + 'Q60'
     elif args.delarchived:
         command = args.header + 'Q61'
-
-    # IMPORTANT: At this point the 'command' needs to contain something.
-    # If you want to add to the tool command link arguments about commands do it before this comment block
-    # Now we verify if the command variable is empty. In this case we throw an error.
-    if len(command) == 0:
-        print("You forgot to specify the action you want to to perform on the payShield")
-        exit()
     if args.proto == 'tls':
         # check that the cert and key files are accessible
         if not (args.keyfile.exists() and args.crtfile.exists()):
@@ -851,7 +933,7 @@ if __name__ == "__main__":
             return_code = ''
             return_code = run_test(payConnInst, command, len(args.header),
                                    DECODERS.get(command[len(args.header):len(args.header) + 2], None), logger)
-            #i = i + 1
+            # i = i + 1
             if return_code != '00':
                 if return_code is None:
                     print("Connection error with the host has occurred")
