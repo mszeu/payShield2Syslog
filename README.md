@@ -18,7 +18,7 @@ It requires **Python 3**. It was tested on **Python 3.13** and **payShield 10k F
 ## Version
 
 
-**0.5**
+**0.6.0**
 
 
 ## Usage
