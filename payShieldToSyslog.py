@@ -180,8 +180,7 @@ class PayConnector:
             print(
                 "The client certificate file or the client key file cannot be "
                 "found or accessed.\n"
-                "Check value passed to the parameters --keyfile and --crtfile",
-                e,
+                "Check value passed to the parameters --keyfile and --crtfile"
             )
             self._force_close()
 
@@ -777,12 +776,12 @@ def run_test(payConnectorInstance: PayConnector, host_command: str,
             decoder_funct(data, header_len, logger_instance)
 
     except ConnectionError as e:
-        print("Connection issue: ", e)
+        print(f"Connection issue: {e}")
     except FileNotFoundError as e:
         print("The client certificate file or the client key file cannot be found or accessed.\n" +
               "Check value passed to the parameters --keyfile and --crtfile", e)
     except Exception as e:
-        print("Unexpected issue:", e)
+        print(f"Unexpected issue: {e}")
     finally:
         return return_code_tuple[0]
 
