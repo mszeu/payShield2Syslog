@@ -28,9 +28,9 @@ from pathlib import Path
 from struct import pack
 from sys import exit  # It is needed by the executable version
 from types import FunctionType
-from typing import Tuple, Dict, Any
+from typing import Tuple, Dict
 
-VERSION = "0.6.0"
+VERSION = "0.6.1"
 
 
 # Begin Class
@@ -130,7 +130,7 @@ class PayConnector:
             The raw response bytes (including the two-byte length prefix),
             or ``None`` on error.
         """
-        size = pack('>h', len(host_command))
+        size = pack('>H', len(host_command))
         message = size + host_command.encode()
 
         try:
@@ -173,8 +173,7 @@ class PayConnector:
                 return data_tuple[0]
 
         except (ConnectionError, TimeoutError) as e:
-            print("Connection issue: ", e)
-            print("Socket Connection issue: " + str(e))
+            print(f"Socket connection issue: {e}")
             self._force_close()
 
         except FileNotFoundError as e:
@@ -188,11 +187,10 @@ class PayConnector:
 
         except ssl.SSLError as e:
             self._force_close()
-            raise ssl.SSLError("TLS connection error: ", e)
+            raise ssl.SSLError("TLS connection error: " + str(e)) from e
 
         except Exception as e:
-            print("Unexpected issue: ", e)
-            print("Unexpected socket issue")
+            print(f"Unexpected socket issue: {e}")
             self._force_close()
 
         return None
@@ -719,7 +717,7 @@ def test_printable(input_str):
 
 
 def run_test(payConnectorInstance: PayConnector, host_command: str,
-             header_len: int = 4, decoder_funct: FunctionType = None, logger_instance=None) -> str:
+             header_len: int = 4, decoder_funct: FunctionType = None, logger_instance=None) -> str|None:
     """
         It connects to the specified host and port, using the specified protocol (tcp, udp, or tls) and sends the command.
 
@@ -744,12 +742,12 @@ def run_test(payConnectorInstance: PayConnector, host_command: str,
 
     try:
         return_code_tuple = (None, None)
-        message_size = pack('>h', len(host_command))
+        message_size = pack('>H', len(host_command))
         message = message_size + host_command.encode()
         data = payConnectorInstance.send_command(host_command)
         # If no data is returned
         if data is None:
-            return 'Error'
+            return return_code_tuple[0]
         # try to decode the result code contained in the reply of the payShield
         check_result_tuple = (-1, "", "")
         return_code_tuple = check_return_message(data, header_len)
